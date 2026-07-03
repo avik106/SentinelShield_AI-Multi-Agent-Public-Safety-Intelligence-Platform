@@ -1,0 +1,3 @@
+senvenv/
+.env
+test.ipynb
