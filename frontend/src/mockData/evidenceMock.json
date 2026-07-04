@@ -1,0 +1,13 @@
+{
+  "case_id": "CASE-2026-9081",
+  "overall_risk_score": 0.88,
+  "risk_category": "HIGH",
+  "fir_draft": "FIRST INFORMATION REPORT\n(Under Section 154 CrPC)\n\n1. District: Jamshedpur, Jharkhand\n2. Act & Sections: Section 66D IT Act, Section 319(2) BNS (Impersonation)\n3. Details of Incident: The victim received a WhatsApp call from an unknown suspect claiming to be a CBI official. The suspect threatened the victim with legal consequences under 'Digital Arrest' and coerced a UPI transfer of 50,000 INR.",
+  "executive_summary": "High-urgency financial fraud involving digital arrest tactics. Suspect impersonated law enforcement officials to extract immediate payment via UPI.",
+  "ipc_sections": ["Section 66D IT Act", "Section 319 BNS", "Section 318 BNS (Cheating)"],
+  "recommended_actions": [
+    "Freeze the recipient UPI address / Bank Account immediately.",
+    "Issue notice under Section 91 CrPC to the telecom service provider for the linked phone number.",
+    "Deploy patrol to identified geospatial hotspot cluster."
+  ]
+}
