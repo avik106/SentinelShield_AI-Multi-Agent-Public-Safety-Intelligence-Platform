@@ -1,0 +1,10 @@
+{
+    "python.defaultInterpreterPath": "C:\\Users\\madhu\\Desktop\\etai\\SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform\\senvenv\\Scripts\\python.exe",
+    "python.pythonPath": "C:\\Users\\madhu\\Desktop\\etai\\SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform\\senvenv\\Scripts\\python.exe",
+    "python.terminal.activateEnvironment": true,
+    "python.analysis.extraPaths": [
+        "C:\\Users\\madhu\\Desktop\\etai\\SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform"
+    ],
+    "python.analysis.venvPath": "C:\\Users\\madhu\\Desktop\\etai\\SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform",
+    "python.analysis.venv": "senvenv"
+}

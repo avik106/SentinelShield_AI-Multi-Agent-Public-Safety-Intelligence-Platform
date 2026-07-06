@@ -1,0 +1,9 @@
+{
+  "venvPath": ".",
+  "venv": "senvenv",
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Windows",
+  "typeCheckingMode": "off",
+  "reportMissingImports": false,
+  "reportMissingModuleSource": false
+}

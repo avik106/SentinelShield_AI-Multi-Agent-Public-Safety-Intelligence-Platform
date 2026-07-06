@@ -58,6 +58,12 @@ soundfile>=0.13.1
 # NLP
 spacy>=3.8.0
 nltk>=3.9.1
+langdetect>=1.0.9
+
+# LLM Providers
+google-generativeai>=0.8.0
+openai>=1.57.0
+
 
 # Document Processing
 pymupdf>=1.26.0
