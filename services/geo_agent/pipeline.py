@@ -51,7 +51,7 @@ def run_geo_pipeline(
         # Inject realistic simulated local historical complaints for demonstration/testing
         if len(complaints) == 0:
             import random
-            from datetime import datetime, timedelta
+            from datetime import datetime, timedelta, timezone
             fraud_types = ["upi_fraud", "banking_fraud", "digital_arrest", "whatsapp_fraud", "qr_code_scam"]
 
             # Primary cluster: close proximity (within 1.5 km)
@@ -59,7 +59,7 @@ def run_geo_pipeline(
                 o_lat = lat + random.uniform(-0.015, 0.015)
                 o_lon = lon + random.uniform(-0.015, 0.015)
                 f_type = random.choice(fraud_types)
-                ts = (datetime.utcnow() - timedelta(days=random.randint(0, 30), hours=random.randint(0, 23))).isoformat()
+                ts = (datetime.now(timezone.utc) - timedelta(days=random.randint(0, 30), hours=random.randint(0, 23))).isoformat()
                 working_complaints.append({
                     "lat": o_lat, "lon": o_lon, "fraud_type": f_type,
                     "timestamp": ts, "complaint_id": f"HIST-{1000 + i}",
@@ -70,7 +70,7 @@ def run_geo_pipeline(
                 o_lat = lat + 0.035 + random.uniform(-0.01, 0.01)
                 o_lon = lon - 0.035 + random.uniform(-0.01, 0.01)
                 f_type = random.choice(fraud_types)
-                ts = (datetime.utcnow() - timedelta(days=random.randint(0, 30), hours=random.randint(0, 23))).isoformat()
+                ts = (datetime.now(timezone.utc) - timedelta(days=random.randint(0, 30), hours=random.randint(0, 23))).isoformat()
                 working_complaints.append({
                     "lat": o_lat, "lon": o_lon, "fraud_type": f_type,
                     "timestamp": ts, "complaint_id": f"HIST-{2000 + i}",

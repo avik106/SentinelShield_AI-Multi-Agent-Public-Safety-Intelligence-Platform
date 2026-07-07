@@ -23,15 +23,26 @@ settings = get_settings()
 def _qdrant_search(query_vector: list[float], collection: str, top_k: int) -> list[dict]:
     try:
         from shared.db import get_qdrant_client
+        from qdrant_client.models import Distance, VectorParams  # noqa: F401
         client = get_qdrant_client()
-        results = client.search(
-            collection_name=collection,
-            query_vector=query_vector,
-            limit=top_k,
-            with_payload=True,
-        )
+        # Support both legacy (.search) and new (.query_points) Qdrant client APIs
+        if hasattr(client, "query_points"):
+            response = client.query_points(
+                collection_name=collection,
+                query=query_vector,
+                limit=top_k,
+                with_payload=True,
+            )
+            raw_results = response.points
+        else:
+            raw_results = client.search(  # type: ignore[attr-defined]
+                collection_name=collection,
+                query_vector=query_vector,
+                limit=top_k,
+                with_payload=True,
+            )
         hits = []
-        for r in results:
+        for r in raw_results:
             payload = r.payload or {}
             hits.append({
                 "id": str(r.id),
@@ -141,7 +152,7 @@ def run_rag_pipeline(
             citations.append(Citation(
                 source_id=chunk.get("id", f"chunk_{i}"),
                 chunk_text=text[:300],
-                relevance_score=round(chunk.get("relevance_score", chunk.get("rrf_score", 0.0)), 4),
+                relevance_score=round(float(chunk.get("relevance_score") or chunk.get("rrf_score") or 0.0), 4),
                 source_type=chunk.get("source_type", "case"),
             ))
             if chunk.get("source_type") == "case":

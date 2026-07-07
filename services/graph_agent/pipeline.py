@@ -166,7 +166,7 @@ def run_graph_pipeline(
         high_risk = []
 
     # 6. Risk score based on entity count + ring sizes
-    total_entities = sum(
+    total_entities = (
         len(entities.phone_numbers) + len(entities.upi_ids) + len(entities.bank_accounts)
     )
     max_ring_size = max((r.size for r in fraud_rings), default=0)

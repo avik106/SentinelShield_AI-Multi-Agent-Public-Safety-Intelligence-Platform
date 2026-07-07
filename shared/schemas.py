@@ -6,7 +6,7 @@ All agent input/output types are defined here for cross-agent consistency.
 from __future__ import annotations
 from typing import Any
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 
@@ -51,7 +51,7 @@ class BaseAgentResult(BaseModel):
     agent_name: str
     processing_time_ms: float = 0.0
     error: str | None = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

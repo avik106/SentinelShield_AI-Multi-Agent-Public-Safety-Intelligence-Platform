@@ -5,6 +5,7 @@ Entity normalization, Cypher generation helpers, graph analysis utilities.
 
 from __future__ import annotations
 import hashlib
+from typing import Any
 from loguru import logger
 
 
@@ -47,7 +48,7 @@ def build_fraud_ring_summary(communities: list[list[str]]) -> list[dict]:
     return rings
 
 
-def pagerank_local(G) -> dict[str, float]:
+def pagerank_local(G) -> dict[Any, float]:
     """Run NetworkX PageRank on a local graph."""
     try:
         import networkx as nx

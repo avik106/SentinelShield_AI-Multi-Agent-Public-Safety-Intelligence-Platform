@@ -51,7 +51,7 @@ def _load_classifier():
         # Replace head for binary classification (genuine/fake)
         import torch.nn as nn
         in_features = model.classifier[1].in_features
-        model.classifier[1] = nn.Linear(in_features, 2)
+        model.classifier[1] = nn.Linear(in_features, 2)  # type: ignore[arg-type]
         model.eval()
         logger.info("EfficientNetV2 classifier initialized (random weights — fine-tune for production).")
         return model

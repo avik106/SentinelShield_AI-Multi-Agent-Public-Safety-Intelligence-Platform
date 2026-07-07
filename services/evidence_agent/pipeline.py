@@ -5,7 +5,7 @@ Aggregates all agent results → FIR draft → investigation report → evidence
 
 from __future__ import annotations
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from loguru import logger
 
 from shared.schemas import (
@@ -118,7 +118,7 @@ def run_evidence_pipeline(
     complainant_contact: str | None = None,
 ) -> EvidencePackage:
     t0 = time.time()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # 1. Entity deduplication
     entity_summary = _deduplicate_entities(scam_result, voice_result)

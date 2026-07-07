@@ -24,6 +24,7 @@ from services.orchestrator.nodes import (
     risk_aggregation_node,
 )
 from services.orchestrator.router import route_evidence, should_run_rag
+from shared.schemas import AgentState
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ def build_graph():
     if not _LANGGRAPH:
         return None
 
-    graph = StateGraph(dict)
+    graph = StateGraph(AgentState)
 
     # Register nodes
     graph.add_node("scam_agent", scam_agent_node)

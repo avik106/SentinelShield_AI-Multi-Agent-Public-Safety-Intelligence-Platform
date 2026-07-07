@@ -336,13 +336,13 @@ async def run_pipeline_upload(
         "errors": [],
     }
 
-    if audio_file:
+    if audio_file and audio_file.filename:
         path = Path(settings.UPLOAD_DIR) / f"{case_id}_{audio_file.filename}"
         with open(path, "wb") as f:
             f.write(await audio_file.read())
         state["audio_path"] = str(path)
 
-    if image_file:
+    if image_file and image_file.filename:
         path = Path(settings.UPLOAD_DIR) / f"{case_id}_{image_file.filename}"
         with open(path, "wb") as f:
             f.write(await image_file.read())

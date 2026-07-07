@@ -5,18 +5,21 @@ Geospatial data helpers, clustering utilities, folium heatmap generation.
 
 from __future__ import annotations
 import os
-import tempfile
+from typing import TYPE_CHECKING
 from loguru import logger
 
-try:
+if TYPE_CHECKING:
     import pandas as pd
     import numpy as np
+
+try:
+    import pandas as _pd  # noqa: F401
+    import numpy as _np  # noqa: F401
 except ImportError:
-    pd = None  # type: ignore[assignment]
-    np = None  # type: ignore[assignment]
+    pass
 
 
-def build_complaint_dataframe(complaints: list[dict]) -> "pd.DataFrame":
+def build_complaint_dataframe(complaints: list[dict]) -> pd.DataFrame:
     """Convert complaint records to a pandas DataFrame for clustering."""
     import pandas as pd
     df = pd.DataFrame(complaints)
@@ -30,24 +33,24 @@ def build_complaint_dataframe(complaints: list[dict]) -> "pd.DataFrame":
     return df
 
 
-def run_dbscan(df: "pd.DataFrame", eps_km: float = 2.0, min_samples: int = 3) -> "np.ndarray":
+def run_dbscan(df: pd.DataFrame, eps_km: float = 2.0, min_samples: int = 3) -> np.ndarray:
     """
     DBSCAN clustering on lat/lon coordinates.
     eps_km: radius in km (converted to radians for haversine metric).
     Returns cluster labels array.
     """
-    import numpy as np
+    import numpy as np  # noqa: F811
     from sklearn.cluster import DBSCAN
     coords = df[["lat", "lon"]].values
     # Convert km to radians for haversine
     eps_rad = eps_km / 6371.0
     coords_rad = np.radians(coords)
     db = DBSCAN(eps=eps_rad, min_samples=min_samples, algorithm="ball_tree", metric="haversine")
-    labels = db.fit_predict(coords_rad)
+    labels: np.ndarray = db.fit_predict(coords_rad)  # type: ignore[assignment]
     return labels
 
 
-def extract_hotspots(df: "pd.DataFrame", labels: "np.ndarray") -> list[dict]:
+def extract_hotspots(df: pd.DataFrame, labels: np.ndarray) -> list[dict]:
     """Convert DBSCAN cluster labels to hotspot dicts."""
     import numpy as np
     from shared.schemas import RiskLevel
@@ -85,14 +88,14 @@ def extract_hotspots(df: "pd.DataFrame", labels: "np.ndarray") -> list[dict]:
     return sorted(hotspots, key=lambda h: h["complaint_count"], reverse=True)
 
 
-def generate_heatmap(df: "pd.DataFrame") -> str | None:
+def generate_heatmap(df: pd.DataFrame) -> str | None:
     """Generate folium HeatMap HTML and save to temp file. Returns file path."""
     try:
         import folium
         from folium.plugins import HeatMap
 
-        center_lat = float(df["lat"].mean())
-        center_lon = float(df["lon"].mean())
+        center_lat = df["lat"].mean()
+        center_lon = df["lon"].mean()
         m = folium.Map(location=[center_lat, center_lon], zoom_start=10, tiles="CartoDB dark_matter")
         heat_data = df[["lat", "lon"]].values.tolist()
         HeatMap(heat_data, radius=15, blur=10, min_opacity=0.4).add_to(m)
@@ -107,15 +110,15 @@ def generate_heatmap(df: "pd.DataFrame") -> str | None:
         return None
 
 
-def compute_temporal_trend(df: "pd.DataFrame") -> dict[str, int]:
+def compute_temporal_trend(df: pd.DataFrame) -> dict[str, int]:
     """Count complaints by hour of day."""
     try:
         import pandas as pd
         df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
         df = df.dropna(subset=["timestamp"])
-        df["hour"] = df["timestamp"].dt.hour
+        df["hour"] = df["timestamp"].dt.hour  # type: ignore[union-attr]
         trend = df.groupby("hour").size().to_dict()
-        return {str(k): int(v) for k, v in trend.items()}
+        return {str(k): v for k, v in trend.items()}
     except Exception as e:
         logger.warning(f"Temporal trend failed: {e}")
         return {}

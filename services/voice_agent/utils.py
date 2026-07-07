@@ -21,7 +21,7 @@ def load_audio(audio_path: str, target_sr: int = 16000) -> tuple[np.ndarray, int
     """
     import librosa
     waveform, sr = librosa.load(audio_path, sr=target_sr, mono=True)
-    return waveform.astype(np.float32), sr
+    return waveform.astype(np.float32), int(sr)
 
 
 def get_duration(waveform: np.ndarray, sr: int) -> float:
