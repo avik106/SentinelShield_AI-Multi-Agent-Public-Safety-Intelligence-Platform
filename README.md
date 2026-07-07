@@ -5,552 +5,185 @@
 
 **Predict. Prevent. Protect.**
 
-![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python)
+![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue?style=for-the-badge&logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi)
 ![React](https://img.shields.io/badge/React-Frontend-61DAFB?style=for-the-badge&logo=react)
-![LangGraph](https://img.shields.io/badge/LangGraph-Agentic_AI-orange?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Under%20Development-red?style=for-the-badge)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?style=for-the-badge&logo=tailwindcss)
+![Status](https://img.shields.io/badge/Status-Fully%20Integrated-success?style=for-the-badge)
 
-*A Production-Grade Multi-Agent AI Platform designed to detect, analyze, investigate, and prevent modern digital frauds using Agentic AI, Hybrid RAG, Graph Intelligence, and Explainable AI.*
+*SentinelShield AI is an intelligent Multi-Agent safety platform that assists law enforcement agencies, cybercrime investigators, and citizens by automatically analyzing multimodal evidence, mapping fraud networks, identifying crime hotspots, and drafting First Information Reports (FIR).*
 
 </div>
 
 ---
 
-# 📖 Overview
-
-SentinelShield AI is an intelligent Public Safety platform that assists citizens, law enforcement agencies, financial institutions, and cybercrime investigators by automatically analyzing multimodal evidence, identifying digital fraud patterns, correlating connected entities, and generating explainable investigation reports.
-
-Unlike traditional complaint systems that react after fraud occurs, SentinelShield AI continuously analyzes incoming evidence and proactively identifies suspicious activities using specialized AI agents working collaboratively through an AI Orchestrator.
-
----
-
-# 🎯 Problem Statement
-
-Modern digital frauds have evolved rapidly with the use of artificial intelligence and social engineering techniques.
-
-These include:
-
-- Digital Arrest Scams
-- UPI Fraud
-- Banking Fraud
-- Fake Government Portals
-- AI Voice Cloning
-- Counterfeit Currency
-- WhatsApp Fraud
-- QR Code Scams
-- Identity Theft
-- Phishing Websites
-
-Current systems primarily investigate fraud **after victims report incidents**, resulting in delayed response and increased financial loss.
-
-SentinelShield AI transforms fraud investigation from a reactive workflow into a proactive intelligence-driven system.
+## 📖 Table of Contents
+1. [System Architecture](#-system-architecture)
+2. [Specialized Multi-Agent Workflow](#-specialized-multi-agent-workflow)
+3. [Interactive Frontend Portal](#-interactive-frontend-portal)
+4. [Backend API Interface](#-backend-api-interface)
+5. [Installation & Setup](#-installation--setup)
+6. [Running the Application](#-running-the-application)
+7. [Simulation Mode & Graceful Fallbacks](#-simulation-mode--graceful-fallbacks)
+8. [Directory Structure](#-directory-structure)
 
 ---
 
-# 🚀 Vision
+## 🏗️ System Architecture
 
-Instead of asking
-
-> **"Has this scam already happened?"**
-
-SentinelShield AI asks
-
-> **"Is this interaction showing the behavioural characteristics of an emerging fraud?"**
-
-Every uploaded evidence contributes to a continuously evolving Fraud Intelligence Graph, allowing the platform to detect patterns much earlier than traditional systems.
-
----
-
-# ⭐ Core Features
-
-- 🤖 Multi-Agent AI Architecture
-- 🧠 Hybrid RAG Investigation Copilot
-- 🌐 Fraud Knowledge Graph
-- 📄 OCR & Document Intelligence
-- 🖼️ Counterfeit Currency Detection
-- 🎙️ Voice Scam Detection
-- 📍 Crime Heatmaps
-- 📊 Explainable Risk Scoring
-- 📑 Automated Investigation Reports
-- 🔎 Entity Relationship Analysis
-- 📚 Evidence Management
-- 🚀 Production Ready REST APIs
-
----
-
-# 🏗️ High-Level Architecture
+SentinelShield AI operates by coordinating heterogeneous inputs (voice, text statements, currency screenshots, coordinate locations) through a parallel fan-out multi-agent flow. 
 
 ```text
-                          Citizen / Police / Bank Portal
-                                      │
-                                      ▼
-                              Authentication Layer
-                                      │
-                                      ▼
-                                API Gateway
-                                      │
-                                      ▼
-                     Multi-Agent AI Orchestrator (LangGraph)
-                                      │
+                           Citizen / Police / Bank Portal
+                                       │
+                                       ▼
+                                 API Gateway (FastAPI)
+                                       │
+                                       ▼
+                      Multi-Agent AI Orchestrator (LangGraph)
+                                       │
          ┌────────────────────────────────────────────────────────────┐
          │                                                            │
          ▼                                                            ▼
- Evidence Intelligence Engine                              Investigation Layer
+  Evidence Ingestion                                           Investigation Layer
          │                                                            │
          ▼                                                            ▼
- ┌───────────────────────────────────────────────────────────────────────────┐
- │                    Specialized AI Agents                                 │
- │                                                                           │
- │ • Scam Detection Agent                                                    │
- │ • Voice Intelligence Agent                                                │
- │ • Counterfeit Detection Agent                                             │
- │ • OCR & Document Agent                                                    │
- │ • Fraud Graph Intelligence Agent                                          │
- │ • Geospatial Intelligence Agent                                           │
- │ • Investigation Copilot (Hybrid RAG)                                     │
- │ • Evidence Generation Agent                                               │
- │ • Notification Agent                                                      │
- └───────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-                           Risk Aggregation Engine
-                                      │
-                                      ▼
-                    Reports • Alerts • Dashboards • APIs
+  ┌───────────────────────────────────────────────────────────────────────────┐
+  │                    Specialized AI Agents (Parallel Fan-Out)               │
+  │                                                                           │
+  │ • Scam Detection Agent (Zero-shot NLP Classifier / OCR)                  │
+  │ • Voice Intelligence Agent (Cloned Voice Auditing / Deepfakes)            │
+  │ • Counterfeit Detection Agent (Security Thread / Watermark Check)         │
+  │ • Fraud Graph Intelligence Agent (PageRank Centrals / Louvain Rings)       │
+  │ • Geospatial Intelligence Agent (DBSCAN Regional Hotspot Clustering)      │
+  │ • Hybrid RAG Investigation Copilot (Legal precedent matching)             │
+  │ • Evidence Generation Agent (Report compiling / FIR Drafting)            │
+  └───────────────────────────────────────────────────────────────────────────┘
+                                       │
+                                       ▼
+                            Risk Aggregation Engine
+                                       │
+                                       ▼
+                     Reports • Alerts • Dashboards • APIs
 ```
 
 ---
 
-# 🧠 Evidence Intelligence Engine
+## 🤖 Specialized Multi-Agent Workflow
 
-The Evidence Intelligence Engine is the entry point for every uploaded evidence.
+1. **Scam Detection Agent**: Ingests statements and OCR outputs to flag intent markers (Urgency, Threat, Financial request) and classify fraud categories (UPI fraud, digital arrest, government impersonation) using zero-shot classifiers.
+2. **Voice Intelligence Agent**: Evaluates suspect call recordings using speech models, analyzing emotional manipulation indices and audio spectra for speech synthesis cloning indicators.
+3. **Counterfeit currency Agent**: Evaluates suspect banknotes for color-shift thresholds, microprinting anomalies, serial format errors, and watermark validity.
+4. **Fraud Graph Agent**: Ingests extracted numbers, bank details, and UPI IDs into a localized graph, executing NetworkX algorithms to rank node centrality (PageRank) and group suspect entities (Louvain community rings).
+5. **Geospatial Agent**: Maps incident coordinates against regional baselines using DBSCAN to cluster crime density zones and draft patrol deployment coordinates.
+6. **RAG Copilot Agent**: Searches collection chunks to match legal sections and details for investigator queries.
+7. **Evidence Agent**: Collates aggregated risk indexes (weighted logarithmic formula) to output formal BNS-mapped FIR drafts and case summaries.
 
-It transforms heterogeneous evidence into structured information before it reaches the AI agents.
+---
 
-```text
-Citizen Evidence
+## 💻 Interactive Frontend Portal
 
-↓
+The portal is styled with a sleek cyber-defense dark layout featuring five dedicated sections:
 
-Input Validation
+*   **Overview Dashboard**: Displaying aggregated risk scores, risk levels, and a terminal-style editor showing the generated **FIR Draft** and **Executive Summary** with one-click print and copy utilities.
+*   **File Analyzer & Run**: Upload files (image currency checks, call audio) and enter complainant text with coordinate sliders. Shows a step-by-step pipeline status tracker detailing the active agent processing states.
+*   **Fraud Graph Analyzer**: Renders an interactive radial SVG graph layout mapping the case nodes to suspect entities. Includes details inspectors when nodes are hovered/clicked, PageRank centrality scores, and Louvain fraud rings.
+*   **Geospatial Hotspots**: Plots regional hotspots on a simulated radar display and renders temporal daily densities using **Recharts** bar charts.
+*   **Investigation Copilot**: Chatbot utility connecting to the hybrid RAG endpoint to inspect laws, displaying RAG citations (source text and score) and similar case IDs in collapsible side panels.
 
-↓
+---
 
-OCR
+## 🔌 Backend API Interface
 
-↓
+The API gateway exposes production-ready REST endpoints:
 
-Metadata Extraction
+*   `POST /api/pipeline/upload`: Full multi-agent workflow accepting `multipart/form-data` uploads (audio files, image files, statement texts, and lat/lon values) returning the full case payload.
+*   `POST /api/agents/rag`: Ask questions based on case contexts, yielding custom citations and answers.
+*   `POST /api/agents/scam/upload`: Standalone image/text scam classification.
+*   `POST /api/agents/voice/upload`: Standalone deepfake voice classification.
+*   `POST /api/agents/counterfeit/upload`: Standalone currency note verification.
 
-↓
+---
 
-Language Detection
+## 🛠️ Installation & Setup
 
-↓
+### Prerequisites
+- Node.js (v18+)
+- Python (3.12 or 3.14)
 
-Entity Recognition
+### 1. Backend Setup
+Install core python dependencies. The backend uses lazy-loading mechanics, allowing the server to boot up even without starting databases:
+```bash
+# Navigate to backend directory and install core modules
+pip install fastapi uvicorn pydantic pydantic-settings python-multipart loguru networkx sqlalchemy
+```
 
-↓
-
-Speech Processing
-
-↓
-
-Image Processing
-
-↓
-
-URL Analysis
-
-↓
-
-Feature Engineering
-
-↓
-
-Normalized Evidence
-
-↓
-
-AI Orchestrator
+### 2. Frontend Setup
+Navigate into the `frontend` folder and install NPM packages:
+```bash
+cd frontend
+npm install
 ```
 
 ---
 
-# 🤖 Multi-Agent AI Workflow
+## 🚀 Running the Application
 
-## Scam Detection Agent
-
-Detects
-
-- Digital Arrest
-- UPI Fraud
-- Banking Fraud
-- QR Code Scam
-- WhatsApp Scam
-
-Pipeline
-
-```text
-Message
-
-↓
-
-OCR (Optional)
-
-↓
-
-Text Cleaning
-
-↓
-
-Embedding
-
-↓
-
-Fraud Classification
-
-↓
-
-Threat Score
-
-↓
-
-Explanation
+### Step 1: Start Backend API
+Run the Python FastAPI server. It is recommended to use the Python instance where the packages were installed:
+```powershell
+# From the project root folder
+C:\Users\nikhi\AppData\Local\Python\pythoncore-3.14-64\python.exe main.py
 ```
+*The server will spin up on **`http://localhost:8000`**.*
 
----
-
-## Voice Intelligence Agent
-
-Analyzes
-
-- Scam Calls
-- AI Voice Cloning
-- Emotional Manipulation
-- Social Engineering
-
-```text
-Audio
-
-↓
-
-Speech-to-Text
-
-↓
-
-Speaker Analysis
-
-↓
-
-Emotion Detection
-
-↓
-
-Deepfake Detection
-
-↓
-
-Risk Score
+### Step 2: Start Frontend
+From a second terminal, spin up the Vite React server:
+```bash
+cd frontend
+npm run dev
 ```
+*The portal will boot up on **`http://localhost:5173`**.*
 
 ---
 
-## Counterfeit Detection Agent
+## 🔄 Simulation Mode & Graceful Fallbacks
 
-Detects counterfeit currency through
+SentinelShield AI is designed with an **adaptive safety architecture**. If the heavy external AI weights (such as EasyOCR, PyTorch, Hugging Face Transformers) or databases (PostgreSQL, Neo4j, Qdrant) are offline or missing:
 
-- Security Thread Analysis
-- Serial Number Verification
-- Texture Analysis
-- Feature Detection
+- **Scam Classifier Fallback**: Uses rule-based keyword triggers to assess intent flags and classify scam types.
+- **Fraud Graph Fallback**: Falls back from Neo4j server nodes to in-memory local NetworkX graphs to execute PageRank and Louvain communities.
+- **Geospatial Fallback**: If coordinate historical baselines are empty, the pipeline dynamically generates local simulated complaints, enabling DBSCAN to successfully cluster hotspots.
+- **RAG Fallback**: Uses a local keyword search index over retrieved evidence nodes when vector database clusters are offline.
 
----
-
-## Fraud Graph Intelligence Agent
-
-Builds a continuously evolving fraud network.
-
-Connected entities include
-
-- Phone Number
-- Email
-- Bank Account
-- UPI
-- Device
-- SIM
-- IP Address
-- Complaint
-- Victim
-
-Neo4j enables investigators to identify fraud rings, recurring offenders, and hidden relationships.
+This ensures the portal is **100% interactive, testable, and functional** out of the box.
 
 ---
 
-## Investigation Copilot
-
-Hybrid RAG powered assistant capable of
-
-- Case Summarization
-- Similar Case Retrieval
-- Investigation Assistance
-- Evidence Search
-- Timeline Generation
-- Report Generation
-
----
-
-## Geospatial Intelligence Agent
-
-Provides
-
-- Crime Heatmaps
-- Hotspot Prediction
-- Regional Fraud Trends
-
----
-
-## Evidence Generation Agent
-
-Automatically generates
-
-- FIR Drafts
-- Investigation Reports
-- Evidence Packages
-- Executive Summaries
-- Timeline Reports
-
----
-
-# 🔄 End-to-End Workflow
-
-```text
-Citizen Uploads Evidence
-
-↓
-
-Authentication
-
-↓
-
-Evidence Intelligence Engine
-
-↓
-
-AI Orchestrator
-
-↓
-
-Parallel AI Agent Execution
-
-↓
-
-Risk Aggregation
-
-↓
-
-Graph Intelligence Update
-
-↓
-
-Hybrid RAG Investigation
-
-↓
-
-Evidence Generation
-
-↓
-
-Notification Service
-
-↓
-
-Citizen & Police Dashboard
-```
-
----
-
-# 🛠️ Technology Stack
-
-## Backend
-
-- Python 3.12
-- FastAPI
-- LangGraph
-- LangChain
-- SQLAlchemy
-
-## Frontend
-
-- React
-- TypeScript
-- Tailwind CSS
-
-## Artificial Intelligence
-
-- PyTorch
-- Hugging Face Transformers
-- Sentence Transformers
-- Whisper
-- OpenCV
-- YOLO
-
-## Retrieval-Augmented Generation
-
-- Qdrant
-- Hybrid Search
-- BGE Embeddings
-- Cross Encoder Reranker
-- MMR Retrieval
-
-## Graph Intelligence
-
-- Neo4j
-- NetworkX
-
-## Database
-
-- PostgreSQL
-- Redis
-- Qdrant
-- Neo4j
-
-## Monitoring
-
-- LangSmith
-- Prometheus
-- Grafana
-
-## DevOps
-
-- Docker
-- Docker Compose
-- GitHub Actions
-
----
-
-# 📂 Repository Structure
+## 📂 Directory Structure
 
 ```bash
 sentinelshield-ai/
-
-├── frontend/
-│
-├── backend/
-│
-├── services/
-│   ├── orchestrator/
-│   ├── scam_agent/
-│   ├── voice_agent/
-│   ├── counterfeit_agent/
-│   ├── graph_agent/
-│   ├── rag_agent/
-│   ├── geo_agent/
-│   ├── evidence_agent/
-│   └── notification_agent/
-│
-├── shared/
-│
-├── databases/
-│
-├── deployment/
-│
-├── monitoring/
-│
-├── infrastructure/
-│
-├── docs/
-│
-├── tests/
-│
-└── README.md
+├── main.py                     # FastAPI REST API Gateway Entrypoint
+├── requirements.txt            # Project python dependencies manifest
+├── services/                   # Multi-Agent logic
+│   ├── orchestrator/           # LangGraph state machine configuration
+│   ├── scam_agent/             # Text & OCR scam classifier agent
+│   ├── voice_agent/            # deepfake audio detection agent
+│   ├── counterfeit_agent/      # banknote verification agent
+│   ├── graph_agent/            # PageRank / Louvain fraud network mapping
+│   ├── geo_agent/              # DBSCAN coordinate clustering & hotspots
+│   ├── rag_agent/              # Legal search RAG copilot agent
+│   └── evidence_agent/         # FIR generator and report compiler
+├── shared/                     # Shared models, schemas, and configurations
+│   ├── config.py               # Singleton Settings loader
+│   ├── db.py                   # SQL, Redis, Neo4j, Qdrant connectors
+│   └── schemas.py              # Cross-agent shared Pydantic schemas
+└── frontend/                   # React web portal
+    ├── index.html              # Main HTML entrypoint (Google Fonts setup)
+    ├── package.json            # React & Vite packages manifest
+    └── src/
+        ├── App.jsx             # Dashboard workspace panel views
+        ├── index.css           # Tailwind v4 directives and theme fonts
+        └── main.jsx            # React root renderer
 ```
-
----
-
-# 📅 Development Roadmap
-
-## Phase 1
-
-- Project Architecture
-- Backend Setup
-- Frontend Setup
-- Authentication
-
-## Phase 2
-
-- Evidence Intelligence Engine
-- OCR
-- Input Router
-
-## Phase 3
-
-- AI Orchestrator
-- Scam Detection Agent
-- Voice Agent
-
-## Phase 4
-
-- Fraud Graph Intelligence
-- Neo4j Integration
-
-## Phase 5
-
-- Hybrid RAG Investigation Copilot
-
-## Phase 6
-
-- Counterfeit Detection
-- Geospatial Intelligence
-
-## Phase 7
-
-- Dashboards
-- Report Generation
-
-## Phase 8
-
-- Docker Deployment
-- Monitoring
-- CI/CD
-- Production Deployment
-
----
-
-# 🚀 Future Enhancements
-
-- Real-Time Streaming Intelligence
-- Blockchain-Based Evidence Integrity
-- Mobile Application
-- Federated Learning
-- Face Verification
-- Behavioural Biometrics
-- Digital Forensics Toolkit
-- AI Threat Prediction
-- National Fraud Intelligence Sharing
-
----
-
-# 🤝 Contributing
-
-Contributions are welcome!
-
-If you'd like to improve SentinelShield AI, feel free to fork the repository, open issues, or submit pull requests.
-
----
-
-# 📄 License
-
-This project is licensed under the **MIT License**.
-
----
-
-<div align="center">
-
-### ⭐ If you found this project interesting, please consider giving it a star.
-
-**Building the Future of AI-Powered Public Safety.**
-
-</div>

@@ -19,6 +19,8 @@ def evidence_agent_node(state: dict) -> dict:
             graph_result=state.get("graph_result"),
             geo_result=state.get("geo_result"),
             rag_result=state.get("rag_result"),
+            complainant_name=state.get("complainant_name"),
+            complainant_contact=state.get("complainant_contact"),
         )
         return {"evidence_package": result, "overall_risk_score": result.overall_risk_score}
     except Exception as e:

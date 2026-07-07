@@ -289,11 +289,23 @@ async def run_full_pipeline(request: FullPipelineRequest):
 
     # Serialize evidence package
     ep = result_state.get("evidence_package")
+    scam_res = result_state.get("scam_result")
+    voice_res = result_state.get("voice_result")
+    counterfeit_res = result_state.get("counterfeit_result")
+    graph_res = result_state.get("graph_result")
+    geo_res = result_state.get("geo_result")
+    rag_res = result_state.get("rag_result")
     return {
         "case_id": state["case_id"],
         "overall_risk_score": result_state.get("overall_risk_score", 0.0),
         "risk_level": result_state.get("risk_level", "LOW"),
         "evidence_package": ep.model_dump(mode="json") if ep else None,
+        "scam_result": scam_res.model_dump(mode="json") if scam_res else None,
+        "voice_result": voice_res.model_dump(mode="json") if voice_res else None,
+        "counterfeit_result": counterfeit_res.model_dump(mode="json") if counterfeit_res else None,
+        "graph_result": graph_res.model_dump(mode="json") if graph_res else None,
+        "geo_result": geo_res.model_dump(mode="json") if geo_res else None,
+        "rag_result": rag_res.model_dump(mode="json") if rag_res else None,
         "errors": result_state.get("errors", []),
     }
 
@@ -319,6 +331,8 @@ async def run_pipeline_upload(
         "officer_query": officer_query,
         "lat": lat,
         "lon": lon,
+        "complainant_name": complainant_name,
+        "complainant_contact": complainant_contact,
         "errors": [],
     }
 
@@ -336,11 +350,23 @@ async def run_pipeline_upload(
 
     result_state = invoke(state)
     ep = result_state.get("evidence_package")
+    scam_res = result_state.get("scam_result")
+    voice_res = result_state.get("voice_result")
+    counterfeit_res = result_state.get("counterfeit_result")
+    graph_res = result_state.get("graph_result")
+    geo_res = result_state.get("geo_result")
+    rag_res = result_state.get("rag_result")
     return {
         "case_id": case_id,
         "overall_risk_score": result_state.get("overall_risk_score", 0.0),
         "risk_level": str(result_state.get("risk_level", "LOW")),
         "evidence_package": ep.model_dump(mode="json") if ep else None,
+        "scam_result": scam_res.model_dump(mode="json") if scam_res else None,
+        "voice_result": voice_res.model_dump(mode="json") if voice_res else None,
+        "counterfeit_result": counterfeit_res.model_dump(mode="json") if counterfeit_res else None,
+        "graph_result": graph_res.model_dump(mode="json") if graph_res else None,
+        "geo_result": geo_res.model_dump(mode="json") if geo_res else None,
+        "rag_result": rag_res.model_dump(mode="json") if rag_res else None,
         "errors": result_state.get("errors", []),
     }
 
