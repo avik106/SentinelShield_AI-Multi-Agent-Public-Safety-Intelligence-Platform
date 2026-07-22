@@ -64,15 +64,20 @@ async def lifespan(app: FastAPI):
     Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
     Path(settings.REPORTS_DIR).mkdir(parents=True, exist_ok=True)
 
-    # 3. Perform database health checks (log only — support graceful degradation)
+    # 3. Perform database health checks and initialize schemas
     try:
         logger.info("Performing database connectivity audit…")
         db_status = check_all_db_health()
         for db, online in db_status.items():
             status_str = "ONLINE" if online else "OFFLINE (Graceful Degradation Fallbacks Active)"
             logger.info(f"  - {db.upper()}: {status_str}")
+
+        # Automatically initialize database structures & seeds
+        from shared.init_db import initialize_all_databases
+        initialize_all_databases()
     except Exception as e:
-        logger.warning(f"Database health check skipped or failed during startup: {e}")
+        logger.warning(f"Database health check/initialization skipped or failed during startup: {e}")
+
 
     yield
 
@@ -566,9 +571,29 @@ async def run_pipeline_upload(
     )
 
 
+@app.get("/health")
+async def health_check():
+    """Verify system connectivity health metrics across all databases & endpoints."""
+    from shared.db import check_all_db_health
+    db_status = check_all_db_health()
+    
+    # System health is healthy if all connections pass, degraded if fallbacks are active
+    overall_status = "healthy" if all(db_status.values()) else "degraded"
+    
+    return {
+        "status": overall_status,
+        "app_name": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "llm_provider": settings.LLM_PROVIDER,
+        "databases": db_status,
+        "fallbacks_active": not all(db_status.values())
+    }
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Run (dev mode)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 if __name__ == "__main__":
     import uvicorn
