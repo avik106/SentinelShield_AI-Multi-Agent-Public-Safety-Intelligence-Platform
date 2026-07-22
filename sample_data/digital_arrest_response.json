@@ -1,0 +1,107 @@
+{
+  "case_id": "CASE-2026-7890",
+  "overall_risk_score": 0.92,
+  "risk_level": "CRITICAL",
+  "confidence": 0.94,
+  "scam_result": {
+    "status": "SUCCESS",
+    "risk_score": 0.95,
+    "risk_level": "CRITICAL",
+    "scam_type": "digital_arrest",
+    "confidence": 0.96,
+    "entities": {
+      "phone_numbers": ["+91 99887 76655", "+91 81302 99421"],
+      "upi_ids": ["payment.police@paytm", "cbi.officer@ybl"],
+      "bank_accounts": ["30219482103 (SBI)"],
+      "urls": ["http://cbi-arrest-verification.in"],
+      "amounts": ["₹50,000"],
+      "names": ["Rohan Verma", "DCP Sanjay Sharma (Suspect)"],
+      "emails": ["dcp.sharma@fake-cbi.gov.in"],
+      "domains": ["cbi-arrest-verification.in"],
+      "wallet_ids": [],
+      "locations": ["Delhi"]
+    },
+    "explanation": "Coercive social engineering scam involving impersonation of central police agencies. Urgency intent and digital arrest threats were detected.",
+    "language": "en",
+    "intent_flags": { "urgency": true, "impersonation": true, "payment_request": true },
+    "confidence_breakdown": { "Known Scam Pattern": 0.50, "Keyword Match": 0.25, "Urgency Language": 0.05, "Impersonation Language": 0.05, "Payment Request Language": 0.05, "Phone Detection": 0.05, "UPI Detection": 0.05 },
+    "ocr_confidence": 1.0
+  },
+  "voice_result": {
+    "status": "SUCCESS",
+    "transcript": "This is Deputy Commissioner Sanjay Sharma. You are under digital arrest. Transfer fifty thousand rupees to the designated verification account immediately or you will be arrested.",
+    "is_deepfake": true,
+    "deepfake_confidence": 0.98,
+    "emotion": "aggressive",
+    "speaker_count": 1,
+    "audio_duration_seconds": 18.2,
+    "risk_score": 0.95,
+    "risk_level": "CRITICAL",
+    "audio_quality": "excellent",
+    "speaker_confidence": 0.90,
+    "transcription_confidence": 0.97,
+    "confidence": 0.95,
+    "suspicious_timestamps": [
+      { "timestamp": "00:04", "phrase": "under digital arrest" },
+      { "timestamp": "00:09", "phrase": "Transfer fifty thousand rupees" }
+    ],
+    "explanation": "Spectral parameters confirm AI voice synthesis. Highly hostile tone intended to force payment."
+  },
+  "counterfeit_result": {
+    "status": "SKIPPED",
+    "reason": "No banknote image uploaded.",
+    "explanation": "Banknote verification was skipped because no image was provided."
+  },
+  "graph_result": {
+    "status": "SUCCESS",
+    "entities_added": ["Complaint_CASE-2026-7890", "Phone_+91 81302 99421", "UPI_payment.police@paytm"],
+    "edges_added": 4,
+    "pagerank_scores": { "UPI_payment.police@paytm": 0.38, "Phone_+91 81302 99421": 0.25 },
+    "fraud_rings": [
+      { "ring_id": "RING-990", "members": ["UPI_payment.police@paytm", "Phone_+91 81302 99421"], "size": 2, "risk_level": "HIGH", "fraud_types": ["digital_arrest"] }
+    ],
+    "high_risk_nodes": ["UPI_payment.police@paytm"],
+    "risk_score": 0.88,
+    "risk_level": "HIGH",
+    "explanation": "Fraud ring RING-990 connects this suspect number and UPI account to 3 previous complaints.",
+    "graph_explanations": ["Suspect UPI payment.police@paytm links this case to past complaint CASE-2026-4011."],
+    "edges_metadata": [
+      { "source": "Complaint_CASE-2026-7890", "target": "Phone_+91 81302 99421", "relationship": "MENTIONS", "confidence": 0.95, "source_agent": "scam_agent", "evidence": "Parsed from statement text" }
+    ]
+  },
+  "geo_result": {
+    "status": "SUCCESS",
+    "hotspots": [
+      { "lat": 28.6139, "lon": 77.2090, "radius_km": 1.5, "complaint_count": 14, "dominant_fraud_type": "digital_arrest", "risk_level": "HIGH" }
+    ],
+    "patrol_recommendations": ["Increase patrol frequency near New Delhi Central District — 14 active cases reported."],
+    "temporal_trend": { "9": 2, "10": 4, "11": 7, "12": 11, "13": 8, "14": 5, "15": 4 },
+    "total_complaints_analyzed": 41,
+    "risk_zones": [],
+    "risk_score": 0.80,
+    "risk_level": "HIGH",
+    "temporal_hotspots": [{ "cluster_id": 1, "peak_hour": "12:00", "size": 11 }],
+    "historical_trends": { "total_fraud_types": { "digital_arrest": 28, "upi_fraud": 13 } },
+    "confidence_interval": [28.612, 28.615, 77.207, 77.211],
+    "hotspot_explanation": "High-density digital arrest hotspot active between 11:00 AM and 2:00 PM."
+  },
+  "evidence_package": {
+    "status": "SUCCESS",
+    "case_id": "CASE-2026-7890",
+    "overall_risk_score": 0.92,
+    "risk_level": "CRITICAL",
+    "fir_draft": "FIRST INFORMATION REPORT\n(Section 154 CrPC)\n\n1. Case ID: CASE-2026-7890\n2. Sections: Section 66D IT Act, Section 318 BNS (Cheating), Section 319 BNS (Impersonation)\n3. Complainant: Rohan Verma (+91 99887 76655)\n4. Suspect Accused: DCP Sanjay Sharma impersonator (+91 81302 99421)\n5. Incident Facts: The complainant was coerced via WhatsApp video call under the guise of digital arrest and extorted for ₹50,000 transferred to payment.police@paytm. Cloned deepfake speech verified.",
+    "executive_summary": "High-risk social engineering case involving law enforcement impersonation and digital arrest extortion. Evidence includes synthetic voice patterns and community graph linkages.",
+    "ipc_sections": ["Section 66D IT Act", "Section 318 BNS (Cheating)", "Section 319 BNS (Impersonation)"],
+    "recommended_actions": [
+      "Freeze payment.police@paytm bank assets.",
+      "Issue notice to telecom operator for suspect number +91 81302 99421.",
+      "Escalate to cyber cell for immediate deepfake origin tracing."
+    ],
+    "chain_of_custody": [
+      { "file_path": "N/A", "file_type": "metadata", "sha256": "ea829104fae89", "description": "Scam Detection result metadata", "source_agent: "scam_detection_agent", "confidence": 0.96, "timestamp": "2026-07-22T14:11:27Z" },
+      { "file_path": "N/A", "file_type: "metadata", "sha256": "0c9d921abcfef", "description": "Voice Analysis result metadata", "source_agent": "voice_intelligence_agent", "confidence": 0.95, "timestamp": "2026-07-22T14:11:27Z" }
+    ],
+    "skipped_agents": [{ "agent_name": "counterfeit_detection_agent", "reason": "No banknote image uploaded." }]
+  }
+}

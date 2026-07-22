@@ -1,0 +1,89 @@
+{
+  "case_id": "CASE-2026-4412",
+  "overall_risk_score": 0.68,
+  "risk_level": "HIGH",
+  "confidence": 0.85,
+  "scam_result": {
+    "status": "SUCCESS",
+    "risk_score": 0.75,
+    "risk_level": "HIGH",
+    "scam_type": "qr_code_scam",
+    "confidence": 0.88,
+    "entities": {
+      "phone_numbers": ["+91 91234 56789"],
+      "upi_ids": ["deviloan@okaxis"],
+      "bank_accounts": [],
+      "urls": ["http://quick-loan.com"],
+      "amounts": ["₹25,000"],
+      "names": ["Sunita Devi"],
+      "emails": ["loan-helper@gmail.com"],
+      "domains": ["quick-loan.com"],
+      "wallet_ids": [],
+      "locations": ["Jamshedpur"]
+    },
+    "explanation": "Phishing scam utilizing deceptive QR codes to auto-debit funds. Intent flags for banking credential traps detected.",
+    "language": "en",
+    "intent_flags": { "urgency": true, "impersonation": false, "payment_request": true },
+    "confidence_breakdown": { "Known Scam Pattern": 0.40, "Keyword Match": 0.20, "Payment Request Language": 0.05, "UPI Detection": 0.05 },
+    "ocr_confidence": 1.0
+  },
+  "voice_result": {
+    "status": "SKIPPED",
+    "reason": "No suspect call recording provided.",
+    "explanation": "Voice analysis was skipped because no audio file was uploaded."
+  },
+  "counterfeit_result": {
+    "status": "SKIPPED",
+    "reason": "No banknote image uploaded.",
+    "explanation": "Banknote verification was skipped because no image was provided."
+  },
+  "graph_result": {
+    "status": "SUCCESS",
+    "entities_added": ["Complaint_CASE-2026-4412", "UPI_deviloan@okaxis"],
+    "edges_added": 2,
+    "pagerank_scores": { "UPI_deviloan@okaxis": 0.22 },
+    "fraud_rings": [],
+    "high_risk_nodes": [],
+    "risk_score": 0.50,
+    "risk_level": "MEDIUM",
+    "explanation": "Suspect UPI ID deviloan@okaxis was found in 1 other pending cyber complaint.",
+    "graph_explanations": ["Suspect UPI deviloan@okaxis links this case to past complaint CASE-2026-3021."],
+    "edges_metadata": []
+  },
+  "geo_result": {
+    "status": "SUCCESS",
+    "hotspots": [
+      { "lat": 22.8046, "lon": 86.2029, "radius_km": 1.25, "complaint_count": 13, "dominant_fraud_type": "upi_fraud", "risk_level": "HIGH" }
+    ],
+    "patrol_recommendations": ["Increase patrol near Jamshedpur City Center — 13 active upi_fraud cases reported."],
+    "temporal_trend": { "11": 1, "12": 3, "13": 5, "14": 4, "15": 2 },
+    "total_complaints_analyzed": 22,
+    "risk_zones": [],
+    "risk_score": 0.70,
+    "risk_level": "HIGH",
+    "temporal_hotspots": [{ "cluster_id": 1, "peak_hour": "13:00", "size": 5 }],
+    "historical_trends": { "total_fraud_types": { "upi_fraud": 22 } },
+    "confidence_interval": [22.802, 22.807, 86.200, 86.205],
+    "hotspot_explanation": "High-density upi_fraud hotspot active during lunch hours."
+  },
+  "evidence_package": {
+    "status": "SUCCESS",
+    "case_id": "CASE-2026-4412",
+    "overall_risk_score": 0.68,
+    "risk_level": "HIGH",
+    "fir_draft": "FIRST INFORMATION REPORT\n(Section 154 CrPC)\n\n1. Case ID: CASE-2026-4412\n2. Sections: Section 66D IT Act, Section 318 BNS (Cheating)\n3. Complainant: Sunita Devi (+91 91234 56789)\n4. facts: Complainant was scammed via a WhatsApp QR code claiming loan benefits, resulting in unauthorized debit of ₹25,000 to deviloan@okaxis.",
+    "executive_summary": "Medium-to-high risk UPI auto-debit scam utilizing QR codes. Suspect UPI shows prior links to cyber fraud database.",
+    "ipc_sections": ["Section 66D IT Act", "Section 318 BNS (Cheating)"],
+    "recommended_actions": [
+      "Request GPay/NPCI to freeze UPI ID deviloan@okaxis.",
+      "Perform domain blacklist query for quick-loan.com."
+    ],
+    "chain_of_custody": [
+      { "file_path": "N/A", "file_type": "metadata", "sha256": "ab82910cde882", "description": "Scam Detection result metadata", "source_agent": "scam_detection_agent", "confidence": 0.88, "timestamp": "2026-07-22T14:11:27Z" }
+    ],
+    "skipped_agents": [
+      { "agent_name": "voice_intelligence_agent", "reason": "No suspect call recording provided." },
+      { "agent_name": "counterfeit_detection_agent", "reason": "No banknote image uploaded." }
+    ]
+  }
+}

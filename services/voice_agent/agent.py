@@ -12,7 +12,13 @@ def voice_agent_node(state: dict) -> dict:
     """LangGraph node for voice intelligence."""
     audio_path = state.get("audio_path")
     if not audio_path:
-        return {}
+        from shared.schemas import VoiceIntelligenceResult
+        result = VoiceIntelligenceResult(
+            status="SKIPPED",
+            reason="No audio file path provided.",
+            explanation="Voice analysis was skipped because no audio recording was uploaded."
+        )
+        return {"voice_result": result}
     try:
         result = run_voice_pipeline(
             audio_path=audio_path,
@@ -21,9 +27,16 @@ def voice_agent_node(state: dict) -> dict:
         return {"voice_result": result}
     except Exception as e:
         logger.error(f"[VoiceAgent] Node error: {e}")
+        from shared.schemas import VoiceIntelligenceResult
+        result = VoiceIntelligenceResult(
+            status="FAILED",
+            reason=str(e),
+            explanation=f"Voice agent node encountered an exception: {str(e)}"
+        )
         errors = list(state.get("errors", []))
         errors.append(f"voice_agent: {str(e)}")
-        return {"errors": errors}
+        return {"voice_result": result, "errors": errors}
+
 
 
 def run(audio_path: str, case_id: str | None = None):

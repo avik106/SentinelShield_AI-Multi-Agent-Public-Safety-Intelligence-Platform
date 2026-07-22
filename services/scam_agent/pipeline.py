@@ -12,10 +12,6 @@ from functools import lru_cache
 
 from shared.config import get_settings
 from shared.schemas import ScamDetectionResult, ExtractedEntities, RiskLevel, ScamType
-from services.scam_agent.utils import (
-    clean_text, extract_entities, detect_intent_flags,
-    keyword_risk_score, classify_scam_type_by_keywords, detect_language_simple
-)
 
 settings = get_settings()
 
@@ -68,17 +64,23 @@ def _load_langdetect():
 # Step Functions
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _ocr_image(image_path: str) -> str:
-    """Run EasyOCR on an image/PDF page and return concatenated text."""
+def _ocr_image(image_path: str) -> tuple[str, float]:
+    """Run EasyOCR on an image and return (concatenated_text, avg_confidence)."""
     reader = _load_ocr()
     if reader is None:
-        return ""
+        return "", 1.0
     try:
-        results = reader.readtext(image_path, detail=0, paragraph=True)
-        return " ".join(results)
+        # Fetch coordinates and confidences (bbox, text, conf)
+        results = reader.readtext(image_path, detail=1)
+        if not results:
+            return "", 1.0
+        texts = [r[1] for r in results]
+        confs = [float(r[2]) for r in results]
+        avg_conf = sum(confs) / len(confs) if confs else 1.0
+        return " ".join(texts), round(avg_conf, 4)
     except Exception as e:
         logger.warning(f"OCR failed on {image_path}: {e}")
-        return ""
+        return "", 1.0
 
 
 def _ocr_pdf(pdf_path: str) -> str:
@@ -102,6 +104,8 @@ def _detect_language(text: str) -> str:
             return detect_fn(text[:500])  # first 500 chars to avoid slow processing
         except Exception:
             pass
+    # Local fallback guesser
+    from services.scam_agent.utils import detect_language_simple
     return detect_language_simple(text)
 
 
@@ -113,8 +117,8 @@ def _classify_with_llm(text: str) -> tuple[str, float]:
     clf = _load_classifier()
     candidate_labels = [st.value for st in ScamType if st != ScamType.UNKNOWN]
 
+    from services.scam_agent.utils import classify_scam_type_by_keywords, keyword_risk_score
     if clf is None:
-        # Pure keyword fallback
         scam_type = classify_scam_type_by_keywords(text)
         kw_score = keyword_risk_score(text)
         return scam_type, kw_score
@@ -135,25 +139,48 @@ def _compute_risk_score(
     clf_score: float,
     intent_flags: dict[str, bool],
     keyword_score: float,
-    entity_count: int,
-) -> float:
+    has_phone: bool,
+    has_upi: bool,
+) -> tuple[float, dict[str, float]]:
     """
-    Weighted ensemble risk score [0.0, 1.0].
+    Ensemble risk score with detailed confidence breakdown.
     - 50% classifier confidence
     - 25% keyword score
     - 15% intent flags (urgency + impersonation + payment)
-    - 10% entity density
+    - 10% entities density (split into Phone + UPI contributions)
     """
-    intent_score = sum(intent_flags.values()) / max(len(intent_flags), 1)
-    entity_score = min(entity_count / 5.0, 1.0)
+    kw_contrib = round(0.25 * keyword_score, 4)
+    pattern_contrib = round(0.50 * clf_score, 4)
+    
+    urgency_contrib = 0.05 if intent_flags.get("urgency") else 0.0
+    impersonation_contrib = 0.05 if intent_flags.get("impersonation") else 0.0
+    payment_contrib = 0.05 if intent_flags.get("payment_request") else 0.0
+    
+    phone_contrib = 0.05 if has_phone else 0.0
+    upi_contrib = 0.05 if has_upi else 0.0
 
     score = (
-        0.50 * clf_score
-        + 0.25 * keyword_score
-        + 0.15 * intent_score
-        + 0.10 * entity_score
+        kw_contrib
+        + pattern_contrib
+        + urgency_contrib
+        + impersonation_contrib
+        + payment_contrib
+        + phone_contrib
+        + upi_contrib
     )
-    return round(min(max(score, 0.0), 1.0), 4)
+    score = round(min(max(score, 0.0), 1.0), 4)
+
+    breakdown = {
+        "Keyword Match": kw_contrib,
+        "Known Scam Pattern": pattern_contrib,
+        "Urgency Language": urgency_contrib,
+        "Impersonation Language": impersonation_contrib,
+        "Payment Request Language": payment_contrib,
+        "Phone Detection": phone_contrib,
+        "UPI Detection": upi_contrib,
+    }
+
+    return score, breakdown
 
 
 def _risk_level(score: float) -> RiskLevel:
@@ -203,89 +230,132 @@ def run_scam_pipeline(
     case_id: str | None = None,
 ) -> ScamDetectionResult:
     """
-    Main scam detection pipeline.
-
-    Args:
-        text: Raw text input (WhatsApp message, SMS, etc.)
-        image_path: Path to screenshot/image
-        pdf_path: Path to PDF document
-        case_id: Optional case identifier
-
-    Returns:
-        ScamDetectionResult with risk_score, scam_type, entities, explanation.
+    Main scam detection pipeline. Returns a fully explained ScamDetectionResult.
+    Never throws unhandled exceptions.
     """
     t0 = time.time()
+    warnings = []
     ocr_text: str | None = None
+    ocr_conf: float = 1.0
 
-    # 1. Resolve input → text
-    if image_path:
-        ocr_text = _ocr_image(image_path)
-        raw_text = ocr_text
-    elif pdf_path:
-        ocr_text = _ocr_pdf(pdf_path)
-        raw_text = ocr_text
-    else:
-        raw_text = text or ""
+    try:
+        # 1. Resolve input → text
+        if image_path:
+            ocr_text, ocr_conf = _ocr_image(image_path)
+            raw_text = ocr_text
+            if ocr_conf < 0.60:
+                warnings.append(f"Low OCR confidence ({ocr_conf:.2f}). Extracted text may be garbled.")
+        elif pdf_path:
+            ocr_text = _ocr_pdf(pdf_path)
+            ocr_conf = 1.0
+            raw_text = ocr_text
+        else:
+            raw_text = text or ""
+            ocr_conf = 1.0
 
-    if not raw_text.strip():
+        if not raw_text.strip():
+            elapsed = (time.time() - t0) * 1000
+            return ScamDetectionResult(
+                status="SKIPPED",
+                reason="No input text could be extracted.",
+                risk_score=0.0,
+                risk_level=RiskLevel.LOW,
+                scam_type=ScamType.UNKNOWN,
+                confidence=0.0,
+                explanation="No valid textual content found to analyze.",
+                processing_time_ms=elapsed,
+                execution_time_ms=elapsed,
+                ocr_text=ocr_text,
+            )
+
+        # 2. Clean text
+        from services.scam_agent.utils import clean_text, extract_entities, detect_intent_flags, keyword_risk_score
+        cleaned = clean_text(raw_text)
+
+        # 3. Language detection
+        language = _detect_language(cleaned)
+
+        # 4. Entity extraction
+        raw_entities = extract_entities(cleaned)
+        entities = ExtractedEntities(**{k: raw_entities.get(k, []) for k in ExtractedEntities.model_fields})
+
+
+        # 5. Intent flags
+        intent_flags = detect_intent_flags(cleaned)
+
+        # 6. Keyword risk score (fast fallback)
+        kw_score = keyword_risk_score(cleaned)
+
+        # 7. ML classification
+        scam_type_str, clf_score = _classify_with_llm(cleaned)
+
+        # 8. Risk score aggregation and granular breakdown
+        risk_score, breakdown = _compute_risk_score(
+            clf_score=clf_score,
+            intent_flags=intent_flags,
+            keyword_score=kw_score,
+            has_phone=bool(entities.phone_numbers),
+            has_upi=bool(entities.upi_ids),
+        )
+
+        # Propagate uncertainty: if OCR confidence is low, penalize classification score
+        final_confidence = clf_score
+        if ocr_conf < 1.0:
+            final_confidence = round(clf_score * ocr_conf, 4)
+
+        # 9. Map to enum
+        try:
+            scam_type = ScamType(scam_type_str)
+        except ValueError:
+            scam_type = ScamType.UNKNOWN
+
+        risk_level = _risk_level(risk_score)
+
+        # 10. Build explanation
+        explanation = _build_explanation(scam_type_str, risk_score, intent_flags, raw_entities, language)
+
         elapsed = (time.time() - t0) * 1000
+        logger.info(f"[ScamAgent] case={case_id} risk={risk_score:.2f} type={scam_type} conf={final_confidence:.2f} t={elapsed:.0f}ms")
+
+        # Expose execution metrics
+        metrics = {
+            "input_size_chars": len(raw_text),
+            "output_entities_count": sum(len(v) for v in raw_entities.values()),
+            "ocr_confidence": ocr_conf,
+            "raw_classifier_score": clf_score,
+        }
+
         return ScamDetectionResult(
+            status="SUCCESS",
+            risk_score=risk_score,
+            risk_level=risk_level,
+            scam_type=scam_type,
+            confidence=final_confidence,
+            entities=entities,
+            explanation=explanation,
+            language=language,
+            ocr_text=ocr_text,
+            intent_flags=intent_flags,
+            confidence_breakdown=breakdown,
+            ocr_confidence=ocr_conf,
+            warnings=warnings,
+            warning=warnings[0] if warnings else None,
+            processing_time_ms=elapsed,
+            execution_time_ms=elapsed,
+            metrics=metrics,
+        )
+
+    except Exception as e:
+        elapsed = (time.time() - t0) * 1000
+        logger.error(f"[ScamAgent] Pipeline failure: {e}", exc_info=True)
+        return ScamDetectionResult(
+            status="FAILED",
+            reason=str(e),
             risk_score=0.0,
             risk_level=RiskLevel.LOW,
             scam_type=ScamType.UNKNOWN,
             confidence=0.0,
-            explanation="No input text could be extracted.",
+            explanation="Failed to execute scam detection pipeline due to internal exception.",
             processing_time_ms=elapsed,
-            error="empty_input",
-            ocr_text=ocr_text,
+            execution_time_ms=elapsed,
         )
-
-    # 2. Clean text
-    cleaned = clean_text(raw_text)
-
-    # 3. Language detection
-    language = _detect_language(cleaned)
-
-    # 4. Entity extraction
-    raw_entities = extract_entities(cleaned)
-    entity_count = sum(len(v) for v in raw_entities.values())
-    entities = ExtractedEntities(**{k: raw_entities[k] for k in ExtractedEntities.model_fields})
-
-    # 5. Intent flags
-    intent_flags = detect_intent_flags(cleaned)
-
-    # 6. Keyword risk score (fast fallback)
-    kw_score = keyword_risk_score(cleaned)
-
-    # 7. ML classification
-    scam_type_str, clf_score = _classify_with_llm(cleaned)
-
-    # 8. Risk score aggregation
-    risk_score = _compute_risk_score(clf_score, intent_flags, kw_score, entity_count)
-
-    # 9. Map to enum
-    try:
-        scam_type = ScamType(scam_type_str)
-    except ValueError:
-        scam_type = ScamType.UNKNOWN
-
-    risk_level = _risk_level(risk_score)
-
-    # 10. Build explanation
-    explanation = _build_explanation(scam_type_str, risk_score, intent_flags, raw_entities, language)
-
-    elapsed = (time.time() - t0) * 1000
-    logger.info(f"[ScamAgent] case={case_id} risk={risk_score:.2f} type={scam_type} lang={language} t={elapsed:.0f}ms")
-
-    return ScamDetectionResult(
-        risk_score=risk_score,
-        risk_level=risk_level,
-        scam_type=scam_type,
-        confidence=round(clf_score, 4),
-        entities=entities,
-        explanation=explanation,
-        language=language,
-        ocr_text=ocr_text,
-        intent_flags=intent_flags,
-        processing_time_ms=elapsed,
-    )

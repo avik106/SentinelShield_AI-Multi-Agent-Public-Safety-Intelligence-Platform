@@ -12,7 +12,13 @@ def rag_agent_node(state: dict) -> dict:
     """LangGraph node — only runs if officer_query is present in state."""
     query = state.get("officer_query")
     if not query:
-        return {}
+        from shared.schemas import RAGCopilotResult
+        result = RAGCopilotResult(
+            status="SKIPPED",
+            reason="No officer query query provided.",
+            explanation="RAG copilot query was skipped because no question was asked."
+        )
+        return {"rag_result": result}
     try:
         result = run_rag_pipeline(
             query=query,
@@ -21,9 +27,16 @@ def rag_agent_node(state: dict) -> dict:
         return {"rag_result": result}
     except Exception as e:
         logger.error(f"[RAGAgent] Node error: {e}")
+        from shared.schemas import RAGCopilotResult
+        result = RAGCopilotResult(
+            status="FAILED",
+            reason=str(e),
+            explanation=f"RAG copilot node encountered an exception: {str(e)}"
+        )
         errors = list(state.get("errors", []))
         errors.append(f"rag_agent: {str(e)}")
-        return {"errors": errors}
+        return {"rag_result": result, "errors": errors}
+
 
 
 def run(query: str, case_id: str | None = None, top_k: int = 5):

@@ -12,7 +12,13 @@ def counterfeit_agent_node(state: dict) -> dict:
     """LangGraph node for counterfeit detection."""
     image_path = state.get("image_path")
     if not image_path:
-        return {}
+        from shared.schemas import CounterfeitDetectionResult
+        result = CounterfeitDetectionResult(
+            status="SKIPPED",
+            reason="No banknote image path provided.",
+            explanation="Counterfeit detection check was skipped because no image was uploaded."
+        )
+        return {"counterfeit_result": result}
     try:
         result = run_counterfeit_pipeline(
             image_path=image_path,
@@ -21,9 +27,16 @@ def counterfeit_agent_node(state: dict) -> dict:
         return {"counterfeit_result": result}
     except Exception as e:
         logger.error(f"[CounterfeitAgent] Node error: {e}")
+        from shared.schemas import CounterfeitDetectionResult
+        result = CounterfeitDetectionResult(
+            status="FAILED",
+            reason=str(e),
+            explanation=f"Counterfeit agent node encountered an exception: {str(e)}"
+        )
         errors = list(state.get("errors", []))
         errors.append(f"counterfeit_agent: {str(e)}")
-        return {"errors": errors}
+        return {"counterfeit_result": result, "errors": errors}
+
 
 
 def run(image_path: str, case_id: str | None = None):

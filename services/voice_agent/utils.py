@@ -116,3 +116,34 @@ def aggregate_voice_risk(
         + 0.15 * emotion_boost
     )
     return round(min(max(score, 0.0), 1.0), 4)
+
+
+def estimate_audio_quality(waveform: np.ndarray, sr: int) -> str:
+    """
+    Estimates audio quality based on signal variance and silence ratio.
+    Returns: 'excellent', 'good', 'average', or 'poor'.
+    """
+    try:
+        if len(waveform) == 0:
+            return "poor"
+        # Calculate RMS energy
+        rms = float(np.sqrt(np.mean(waveform**2)))
+        # Calculate silence ratio (fraction of frames below threshold)
+        frame_length = int(sr * 0.03)  # 30ms frames
+        hop_length = int(sr * 0.01)    # 10ms hop
+        frames = [waveform[i:i+frame_length] for i in range(0, len(waveform)-frame_length, hop_length)]
+        frame_rms = [np.sqrt(np.mean(f**2)) for f in frames]
+        silence_threshold = 0.005
+        silence_ratio = sum(1 for r in frame_rms if r < silence_threshold) / max(1, len(frame_rms))
+        
+        if rms < 0.002 or silence_ratio > 0.70:
+            return "poor"
+        elif silence_ratio > 0.40 or rms < 0.01:
+            return "average"
+        elif silence_ratio < 0.15 and rms > 0.05:
+            return "excellent"
+        else:
+            return "good"
+    except Exception:
+        return "good"
+

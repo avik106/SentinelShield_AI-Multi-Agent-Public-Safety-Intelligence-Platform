@@ -1,7 +1,54 @@
-senvenv/
+# ==============================================================================
+# SentinelShield AI — Git Ignore Configuration
+# ==============================================================================
+
+# 1. Environment & Secrets
 .env
-test.ipynb
+.env.local
+.env.*.local
+*.env
+
+# 2. Virtual Environments
+venv/
+ENV/
+env/
+senvenv/
+.venv/
+bin/
+lib/
+include/
+share/
+
+# 3. Python Cache & Logs
 __pycache__/
-*.pyc
-reports/
-uploads/
+*.py[cod]
+*$py.class
+*.log
+.pytest_cache/
+.mypy_cache/
+.pyre/
+.ruff_cache/
+reports/report_*.txt
+reports/report_*.pdf
+uploads/*
+!uploads/.gitkeep
+
+# 4. Frontend Node & Builds
+node_modules/
+dist/
+dist-ssr/
+*.local
+.eslintcache
+.vite/
+
+# 5. IDE & OS files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

@@ -4,6 +4,7 @@ Wires all 7 agents into a parallel fan-out → aggregation → RAG → evidence 
 """
 
 from __future__ import annotations
+from typing import TypedDict, Annotated, Any
 from loguru import logger
 
 try:
@@ -28,6 +29,42 @@ from shared.schemas import AgentState
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# State Definition with Reducer
+# ─────────────────────────────────────────────────────────────────────────────
+
+def reduce_errors(left: list[str], right: list[str]) -> list[str]:
+    """Reducer to merge concurrent list updates in parallel branches."""
+    merged = list(left)
+    for err in right:
+        if err not in merged:
+            merged.append(err)
+    return merged
+
+
+class OrchestratorState(TypedDict, total=False):
+    """LangGraph State Definition."""
+    case_id: str
+    text_input: str | None
+    audio_path: str | None
+    image_path: str | None
+    pdf_path: str | None
+    officer_query: str | None
+    lat: float | None
+    lon: float | None
+    scam_result: Any
+    voice_result: Any
+    counterfeit_result: Any
+    graph_result: Any
+    geo_result: Any
+    rag_result: Any
+    evidence_package: Any
+    overall_risk_score: float
+    risk_level: Any
+    errors: Annotated[list[str], reduce_errors]
+    metadata: dict[str, Any]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # LangGraph Graph
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -36,7 +73,7 @@ def build_graph():
     Build and compile the SentinelShield LangGraph.
 
     Graph structure:
-    START → evidence_router (conditional fan-out)
+    START → route_evidence (conditional fan-out)
       → [scam_agent | voice_agent | counterfeit_agent | graph_agent | geo_agent] (parallel)
       → risk_aggregation
       → should_run_rag (conditional)
@@ -46,7 +83,9 @@ def build_graph():
     if not _LANGGRAPH:
         return None
 
+    # Use the schema TypedDict with reducer
     graph = StateGraph(AgentState)
+
 
     # Register nodes
     graph.add_node("scam_agent", scam_agent_node)
@@ -97,23 +136,57 @@ def run_sequential(state: dict) -> dict:
     Useful for testing or environments without langgraph.
     """
     logger.info("[Orchestrator] Running sequential fallback pipeline.")
+    
+    if "errors" not in state:
+        state["errors"] = []
 
-    state.update(scam_agent_node(state))
-
-    if state.get("audio_path"):
-        state.update(voice_agent_node(state))
-
-    if state.get("image_path"):
-        state.update(counterfeit_agent_node(state))
-
-    state.update(graph_agent_node(state))
-    state.update(geo_agent_node(state))
-    state.update(risk_aggregation_node(state))
-
-    if state.get("officer_query"):
-        state.update(rag_agent_node(state))
-
-    state.update(evidence_agent_node(state))
+    # 1. Router determines which parallel agents to run
+    parallel_agents = route_evidence(state)
+    logger.info(f"[Orchestrator Fallback] Routed agents: {parallel_agents}")
+    
+    # 2. Map route names to node functions
+    node_mapping = {
+        "scam_agent": scam_agent_node,
+        "voice_agent": voice_agent_node,
+        "counterfeit_agent": counterfeit_agent_node,
+        "graph_agent": graph_agent_node,
+        "geo_agent": geo_agent_node,
+    }
+    
+    # 3. Execute agents sequentially with error handling (pipeline continues if one fails)
+    for agent_name in parallel_agents:
+        node_fn = node_mapping.get(agent_name)
+        if node_fn:
+            try:
+                result = node_fn(state)
+                state.update(result)
+            except Exception as e:
+                logger.error(f"[Orchestrator Fallback] Failed running {agent_name}: {e}", exc_info=True)
+                state["errors"].append(f"{agent_name}: {str(e)}")
+                
+    # 4. Run risk aggregation
+    try:
+        state.update(risk_aggregation_node(state))
+    except Exception as e:
+        logger.error(f"[Orchestrator Fallback] Failed risk aggregation: {e}", exc_info=True)
+        state["errors"].append(f"risk_aggregation: {str(e)}")
+    
+    # 5. Check if RAG is needed
+    rag_route = should_run_rag(state)
+    if rag_route == "rag_agent":
+        try:
+            state.update(rag_agent_node(state))
+        except Exception as e:
+            logger.error(f"[Orchestrator Fallback] Failed running rag_agent: {e}", exc_info=True)
+            state["errors"].append(f"rag_agent: {str(e)}")
+            
+    # 6. Run final evidence generation
+    try:
+        state.update(evidence_agent_node(state))
+    except Exception as e:
+        logger.error(f"[Orchestrator Fallback] Failed running evidence_agent: {e}", exc_info=True)
+        state["errors"].append(f"evidence_agent: {str(e)}")
+        
     return state
 
 

@@ -1,6 +1,7 @@
 """
 RAG Investigation Copilot Agent — Core Pipeline
 Query embedding → Qdrant dense search + BM25 sparse → RRF fusion → rerank → LLM generation.
+Includes retrieval metrics reporting and a strict hallucination guard.
 """
 
 from __future__ import annotations
@@ -9,9 +10,6 @@ from loguru import logger
 
 from shared.config import get_settings
 from shared.schemas import RAGCopilotResult, Citation
-from services.rag_agent.utils import (
-    embed_query, rerank, reciprocal_rank_fusion, generate_answer
-)
 
 settings = get_settings()
 
@@ -107,81 +105,148 @@ def run_rag_pipeline(
     top_k: int | None = None,
 ) -> RAGCopilotResult:
     """
-    Full RAG pipeline:
-    1. Embed query
-    2. Dense retrieval from Qdrant (3 collections)
-    3. BM25 sparse retrieval on fetched corpus
-    4. RRF merge
-    5. Cross-encoder reranking
-    6. LLM generation with citations
+    Full RAG pipeline.
+    If search results fall below RAG_MIN_CONFIDENCE, Hallucination Guard prevents fabrication.
+    Never throws unhandled exceptions.
     """
     t0 = time.time()
     top_k = top_k or settings.RAG_TOP_K
+    warnings = []
 
     if not query.strip():
         elapsed = (time.time() - t0) * 1000
         return RAGCopilotResult(
-            error="Empty query.",
+            status="SKIPPED",
+            reason="Empty query input.",
+            answer="No reliable supporting evidence found.",
             processing_time_ms=elapsed,
+            execution_time_ms=elapsed,
         )
 
-    # 1. Embed
-    query_vector = embed_query(query)
+    try:
+        # 1. Embed query
+        query_vector = embed_query = None
+        try:
+            from services.rag_agent.utils import embed_query as _embed
+            query_vector = _embed(query)
+        except Exception as e:
+            logger.warning(f"Embedding failed: {e}")
+            warnings.append("Embedding generation failed. Running sparse retrieval only.")
 
-    # 2. Dense retrieval
-    dense_results = _dense_retrieve(query_vector, top_k * 2) if query_vector else []
+        # 2. Dense retrieval
+        dense_results = _dense_retrieve(query_vector, top_k * 2) if query_vector else []
 
-    # 3. BM25 sparse
-    sparse_results = _bm25_search(query, dense_results, top_k * 2)
+        # 3. BM25 sparse retrieval
+        sparse_results = _bm25_search(query, dense_results, top_k * 2)
 
-    # 4. RRF merge
-    merged = reciprocal_rank_fusion(dense_results, sparse_results)
+        # 4. RRF merge
+        from services.rag_agent.utils import reciprocal_rank_fusion
+        merged = reciprocal_rank_fusion(dense_results, sparse_results)
 
-    # 5. Rerank top candidates
-    top_candidates = merged[:top_k * 2]
-    reranked = rerank(query, top_candidates)[:top_k]
+        # 5. Cross-encoder rerank
+        top_candidates = merged[:top_k * 2]
+        reranked = []
+        if top_candidates:
+            try:
+                from services.rag_agent.utils import rerank as _rerank
+                reranked = _rerank(query, top_candidates)[:top_k]
+            except Exception as e:
+                logger.warning(f"Reranking failed: {e}")
+                reranked = top_candidates[:top_k]
 
-    # 6. Build context
-    context_parts = []
-    citations = []
-    similar_cases = []
-    for i, chunk in enumerate(reranked):
-        text = chunk.get("text", "")
-        if text:
-            context_parts.append(f"[{i+1}] {text}")
-            citations.append(Citation(
-                source_id=chunk.get("id", f"chunk_{i}"),
-                chunk_text=text[:300],
-                relevance_score=round(float(chunk.get("relevance_score") or chunk.get("rrf_score") or 0.0), 4),
-                source_type=chunk.get("source_type", "case"),
-            ))
-            if chunk.get("source_type") == "case":
-                case_ref = chunk.get("id", "")
-                if case_ref and case_ref not in similar_cases:
-                    similar_cases.append(case_ref)
+        # 6. Extract documents and build citations
+        citations = []
+        similar_cases = []
+        retrieved_document_ids = []
+        top_chunks = []
+        context_parts = []
 
-    context = "\n\n".join(context_parts) if context_parts else "No relevant documents found in the database."
+        for i, chunk in enumerate(reranked):
+            text = chunk.get("text", "")
+            doc_id = chunk.get("id", f"chunk_{i}")
+            score = round(float(chunk.get("relevance_score") or chunk.get("rrf_score") or 0.0), 4)
+            source_type = chunk.get("source_type", "case")
+            
+            retrieved_document_ids.append(doc_id)
+            top_chunks.append({"id": doc_id, "text": text[:150], "score": score})
 
-    # 7. Generate answer
-    answer, tokens_used = generate_answer(query, context)
+            if text:
+                context_parts.append(f"[{i+1}] {text}")
+                citations.append(Citation(
+                    source_id=doc_id,
+                    chunk_text=text[:300],
+                    relevance_score=score,
+                    source_type=source_type,
+                ))
+                if source_type == "case" and doc_id not in similar_cases:
+                    similar_cases.append(doc_id)
 
-    # Confidence: mean of top reranked relevance scores
-    if citations:
-        confidence = round(sum(c.relevance_score for c in citations) / len(citations), 4)
-        confidence = min(max(confidence, 0.0), 1.0)
-    else:
-        confidence = 0.0
+        # Mean score of retrieved citations
+        if citations:
+            retrieval_confidence = round(sum(c.relevance_score for c in citations) / len(citations), 4)
+            retrieval_confidence = min(max(retrieval_confidence, 0.0), 1.0)
+        else:
+            retrieval_confidence = 0.0
 
-    elapsed = (time.time() - t0) * 1000
-    logger.info(
-        f"[RAGAgent] case={case_id} chunks={len(reranked)} tokens={tokens_used} t={elapsed:.0f}ms"
-    )
+        # 7. Hallucination Guard
+        hallucination_guard_triggered = False
+        answer = ""
+        tokens_used = 0
 
-    return RAGCopilotResult(
-        answer=answer,
-        citations=citations,
-        similar_cases=similar_cases[:5],
-        confidence=confidence,
-        tokens_used=tokens_used,
-        processing_time_ms=elapsed,
-    )
+        # Strict checks to prevent LLM hallucinations on sparse/low-confidence inputs
+        if len(citations) == 0 or retrieval_confidence < settings.RAG_MIN_CONFIDENCE:
+            hallucination_guard_triggered = True
+            answer = "No reliable supporting evidence found."
+            warnings.append(f"Hallucination Guard triggered. Retrieval confidence {retrieval_confidence:.2f} < threshold.")
+            logger.warning(f"[RAGAgent] Hallucination Guard blocked answer. confidence={retrieval_confidence:.2f}")
+        else:
+            context = "\n\n".join(context_parts)
+            try:
+                from services.rag_agent.utils import generate_answer as _gen
+                answer, tokens_used = _gen(query, context)
+            except Exception as e:
+                logger.warning(f"LLM answer generation failed: {e}")
+                answer = "Error generating answer from LLM context."
+
+        elapsed = (time.time() - t0) * 1000
+        logger.info(
+            f"[RAGAgent] case={case_id} chunks={len(reranked)} guard_triggered={hallucination_guard_triggered} t={elapsed:.0f}ms"
+        )
+
+        metrics = {
+            "retrieved_chunks_count": len(reranked),
+            "citations_generated_count": len(citations),
+            "retrieval_confidence": retrieval_confidence,
+            "tokens_used": tokens_used,
+        }
+
+        return RAGCopilotResult(
+            status="SUCCESS",
+            answer=answer,
+            citations=citations,
+            similar_cases=similar_cases[:5],
+            confidence=retrieval_confidence,
+            tokens_used=tokens_used,
+            retrieved_document_count=len(reranked),
+            retrieved_document_ids=retrieved_document_ids,
+            top_chunks=top_chunks,
+            retrieval_confidence=retrieval_confidence,
+            hallucination_guard_triggered=hallucination_guard_triggered,
+            warnings=warnings,
+            warning=warnings[0] if warnings else None,
+            processing_time_ms=elapsed,
+            execution_time_ms=elapsed,
+            metrics=metrics,
+        )
+
+    except Exception as e:
+        elapsed = (time.time() - t0) * 1000
+        logger.error(f"[RAGAgent] Pipeline failure: {e}", exc_info=True)
+        return RAGCopilotResult(
+            status="FAILED",
+            reason=str(e),
+            answer="No reliable supporting evidence found.",
+            confidence=0.0,
+            processing_time_ms=elapsed,
+            execution_time_ms=elapsed,
+        )

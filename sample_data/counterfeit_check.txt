@@ -1,0 +1,12 @@
+Visual Counterfeit Ingestion Sample File:
+--------------------------------------------------------------------------------
+File: banknote_specimen_500.jpg
+Object Checked: Indian 500 Rupee Currency Note (2016 Mahatma Gandhi Series)
+YOLO Bounding Box Targets: Security Thread, Watermark, Serial Number, microtext
+
+Expected Output Metrics:
+- Watermark BBox: PASS (Confidence: 0.80)
+- Security Thread: FAIL (Confidence: 0.85) - Optical variable shift anomalous
+- Microprint Check: FAIL (Confidence: 0.50) - Text edges blurred
+- Serial Number Check: FAIL (Confidence: 0.90) - Alignments anomalous
+- Final Verdict: COUNTERFEIT WARNING (Confidence: 0.89)

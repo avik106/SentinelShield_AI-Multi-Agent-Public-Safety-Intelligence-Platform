@@ -1,0 +1,2 @@
+To test currency note counterfeit checking, place any Indian 500 Rupee Note image in this directory named 'banknote_specimen_500.jpg' and upload it via the File Ingestion form.
+The Counterfeit Agent uses a YOLO detection checkpoint to check watermark boundaries, thread alignments, and microprint text sharpness.

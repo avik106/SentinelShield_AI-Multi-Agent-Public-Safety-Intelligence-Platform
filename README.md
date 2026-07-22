@@ -1,399 +1,255 @@
 <div align="center">
 
 # 🛡️ SentinelShield AI
-### A Multi-Agent AI Platform for Public Safety & Fraud Intelligence
+### AI-Powered Multi-Agent Public Safety Intelligence Platform
 
 **Predict. Prevent. Protect.**
 
-![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue?style=for-the-badge&logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi)
-![LangGraph](https://img.shields.io/badge/LangGraph-Orchestration-1C3C3C?style=for-the-badge)
-![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)
-![Tailwind](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?style=for-the-badge&logo=tailwindcss)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+[![FastAPI Backend](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React Frontend](https://img.shields.io/badge/React-19_Frontend-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+[![LangGraph Orchestrator](https://img.shields.io/badge/LangGraph-Orchestration-1C3C3C?style=for-the-badge&logo=chainlink&logoColor=white)](https://github.com/langchain-ai/langgraph)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![GitHub Stars](https://img.shields.io/github/stars/your-username/SentinelShield-AI?style=for-the-badge&color=blue)](https://github.com/your-username/SentinelShield-AI)
 
-SentinelShield AI ingests a citizen's fraud report — statement, call recording, currency photo, and location — and turns it into a risk score, a fraud-network map, a crime hotspot view, and a legally-formatted FIR draft, in seconds.
+SentinelShield AI ingests citizen fraud reports (text statements, audio recordings, currency snapshots, and location coordinates) and processes them in parallel to output risk scores, connected fraud graph networks, geospatial hotspots, and legally compliant FIR drafts in seconds.
 
-[Features](#-features) • [Architecture](#-system-architecture) • [Screenshots](#-screenshots) • [Setup](#-installation--setup) • [API](#-api-reference) • [Roadmap](#-roadmap)
+[System Architecture](#-system-architecture) • [Multi-Agent Workflow](#-ai-agent-workflow) • [Installation](#-installation--setup) • [Developer Docs](DOCUMENTATION.md) • [Demo Presets Guide](DEMO_GUIDE.md)
 
 </div>
 
 ---
 
 ## 📖 Table of Contents
-
-- [Problem Statement](#-problem-statement)
-- [Solution Overview](#-solution-overview)
-- [Features](#-features)
-- [System Architecture](#-system-architecture)
-- [Multi-Agent Workflow](#-multi-agent-workflow)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Screenshots](#-screenshots)
-- [Installation & Setup](#-installation--setup)
-- [Environment Variables](#-environment-variables)
-- [Running the Application](#-running-the-application)
-- [API Reference](#-api-reference)
-- [Simulation Mode & Graceful Fallbacks](#-simulation-mode--graceful-fallbacks)
-- [Team & Contributions](#-team--contributions)
-- [Roadmap](#-roadmap)
-- [Contributing](#-contributing)
-- [License](#-license)
+1. [Problem Statement](#-problem-statement)
+2. [Solution Overview](#-solution-overview)
+3. [Key Features](#-key-features)
+4. [Technology Stack](#-technology-stack)
+5. [System Architecture](#-system-architecture)
+6. [AI Agent Workflow](#-ai-agent-workflow)
+7. [Project Folder Layout](#-project-folder-layout)
+8. [Installation & Setup](#-installation--setup)
+9. [Environment Variables](#-environment-variables)
+10. [API Gateway Endpoints](#-api-gateway-endpoints)
+11. [Design Decisions & Tradeoffs](#-design-decisions--tradeoffs)
+12. [Limitations & Roadmap](#-limitations--roadmap)
+13. [Contributing](#-contributing)
+14. [License](#-license)
 
 ---
 
 ## 🎯 Problem Statement
 
-Digital fraud — UPI scams, "digital arrest" extortion calls, government-impersonation calls, counterfeit currency, and organized fraud rings — is outpacing the manual capacity of citizen helplines and cybercrime cells. Today:
+Digital fraud (UPI scams, "digital arrest" extortion calls, counterfeit currency, and organized cyber rings) is outpacing citizen helplines and cyber cells. Today, public safety faces severe bottlenecks:
 
-- **Evidence is fragmented.** A single incident produces a text statement, a call recording, a screenshot, and a location — all reviewed separately, with no automated way to correlate them.
-- **Triage is slow and manual.** Officers must read, transcribe, and judge severity by hand, which doesn't scale with complaint volume.
-- **Fraud networks stay invisible.** Complaints are handled in isolation, so shared phone numbers, UPI IDs, and bank accounts linking many victims to the same ring go unnoticed until too late.
-- **Hotspots aren't predicted.** Without spatial/temporal analysis of past incidents, patrols and awareness campaigns can't be proactively targeted.
-- **FIR drafting is inconsistent and slow.** Citing the right legal sections (BNS / IT Act) and assembling evidence takes time and varies by officer.
+- **Fragmented Evidence**: Incidents generate disparate inputs (text, voice recordings, note screenshots, GPS coordinates). Reviews are conducted separately with no automated system-level correlation.
+- **Manual Investigation**: Triage is slow. Officers spend valuable hours transcribing audio, checking coordinates, and checking serial numbers manually.
+- **Invisible Fraud Networks**: Shared phone numbers, bank accounts, and UPI IDs link many victims, but complaints are reviewed in isolation, leaving major fraud rings undetected.
+- **Reactive Patrols**: Crime cells lack automated clustering to identify regional high-density zones, preventing proactive patrolling.
+- **Inconsistent FIR Drafting**: Identifying applicable sections of BNS (Bharatiya Nyaya Sanhita) or IT Act and drafting official dockets takes time.
 
-## 💡 Solution Overview
-
-**SentinelShield AI** is a parallel, multi-agent AI pipeline that ingests every modality of evidence for a case at once, analyzes each with a purpose-built specialist agent, and fuses the results into one explainable risk score and case file.
-
-Four design principles:
-
-| Principle | What it means here |
-|---|---|
-| **Explainable AI (XAI)** | Every agent returns confidence scores, intent flags, and human-readable reasoning — not a black-box label. |
-| **Multimodal Fusion** | Text, OCR'd images, audio, and GPS coordinates are routed to the agent that understands them, then combined by a Risk Aggregation Engine. |
-| **Parallel Fan-Out** | Agents run concurrently, not sequentially, so triage takes seconds instead of manual review cycles. |
-| **Graceful Degradation** | If heavy ML models or external databases (Neo4j, Qdrant, Postgres) are unavailable, every agent falls back to a lightweight local equivalent — the platform never breaks. |
+### How SentinelShield Solves These Problems
+SentinelShield AI coordinates specialized cognitive agents using an asynchronous **parallel fan-out StateGraph**. It parses multi-modal inputs, cross-references suspects against historical complaints, visualizes fraud ring networks, maps regional hotspots, and generates an official BNS-compliant FIR draft with a secure SHA256 Chain of Custody.
 
 ---
 
-## ✨ Features
+## ✨ Key Features
 
-- 🔍 **Automated multi-agent fraud triage** — statement + audio + image + location analyzed in parallel
-- 🧾 **Auto-drafted FIR & executive summary**, mapped to BNS sections and IT Act clauses
-- 🕸️ **Interactive fraud-network graph** — PageRank centrality + Louvain community detection to expose fraud rings
-- 🗺️ **Geospatial hotspot mapping** — DBSCAN clustering with patrol-deployment recommendations
-- 🎙️ **Deepfake / cloned-voice detection** on suspect call recordings
-- 💵 **Counterfeit currency verification** via a custom YOLO detector
-- 💬 **Legal Investigation Copilot** — hybrid RAG chat with citations and similar-case lookup
-- 🖥️ **Cyber-defense styled React dashboard** with live pipeline-progress tracking
-- 🧪 **Mocked-data mode (`USE_MOCKS`)** so the frontend runs standalone against realistic fixtures before/without a live backend
-- 🛟 **Runs fully offline/degraded** — no GPU, API keys, or databases required for a complete demo
+| Feature | Description | Core Engine | Fallback Strategy |
+|---|---|---|---|
+| **Multi-Agent AI** | Parallel fan-out execution of specialty agents | LangGraph StateGraph | Sequential fallback pipeline |
+| **Fraud Graph Analysis** | Visualizes connections & identifies fraud ring members | Neo4j Graph DB & PageRank | Local **NetworkX** in-memory graph |
+| **Voice Intelligence** | Audio transcription & spectral deepfake checks | Whisper STT & Librosa spectral RMS | Skipped warnings if files missing |
+| **Counterfeit Detection** | Rupee banknote security thread & watermark audit | Custom **YOLO** Object Detector | Skipped warnings if images missing |
+| **Geo Intelligence** | Clusters locations to find regional hotspots | DBSCAN with haversine metrics | Coordinate focal point baseline |
+| **Evidence Generation** | Automatically drafts FIRs & compiles Case Reports | Weighted Risk Aggregation | Local text file output (`reports/`) |
+| **Explainable AI (XAI)** | Displays confidence breakdown and intent badges | Granular score matrices | Rule-based keyword/intent scoring |
+
+---
+
+## 🛠️ Technology Stack
+
+- **Backend & Core**: Python, FastAPI, LangGraph, Uvicorn, SQLAlchemy, Pydantic, Loguru
+- **Frontend Console**: React 19, Vite, TailwindCSS v4, Recharts, Lucide Icons, Custom SVG viewports
+- **AI & Document Processing**: Zero-shot XLM-RoBERTa, OpenAI Whisper, EasyOCR, Ultralytics YOLO, Librosa, PyMuPDF
+- **Databases**: PostgreSQL (Relational), Redis (Caching), Neo4j (Graph), Qdrant (Vector)
+- **Deployment**: Docker, docker-compose, Github Actions
 
 ---
 
 ## 🏗️ System Architecture
 
-```
-                           Citizen / Police / Bank Portal
-                                       │
-                                       ▼
-                                 API Gateway (FastAPI)
-                                       │
-                                       ▼
-                      Multi-Agent AI Orchestrator (LangGraph)
-                                       │
-         ┌────────────────────────────────────────────────────────────┐
-         │                                                            │
-         ▼                                                            ▼
-  Evidence Ingestion                                           Investigation Layer
-         │                                                            │
-         ▼                                                            ▼
-  ┌───────────────────────────────────────────────────────────────────────────┐
-  │                    Specialized AI Agents (Parallel Fan-Out)               │
-  │                                                                           │
-  │ • Scam Detection Agent (Zero-shot NLP Classifier / OCR)                   │
-  │ • Voice Intelligence Agent (Cloned Voice Auditing / Deepfakes)            │
-  │ • Counterfeit Detection Agent (Security Thread / Watermark Check)         │
-  │ • Fraud Graph Intelligence Agent (PageRank Centrality / Louvain Rings)    │
-  │ • Geospatial Intelligence Agent (DBSCAN Regional Hotspot Clustering)      │
-  │ • Hybrid RAG Investigation Copilot (Legal precedent matching)            │
-  │ • Evidence Generation Agent (Report compiling / FIR Drafting)            │
-  └───────────────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼
-                            Risk Aggregation Engine
-                                       │
-                                       ▼
-                     Reports • Alerts • Dashboards • APIs
+```text
+  [ Citizen / Officer ] ──► [ React Investigation Console ] ──► [ API Gateway (FastAPI) ]
+                                                                          │
+                                                                          ▼
+                                                                [ LangGraph Orchestrator ]
+                                                                          │
+                                         ┌────────────────────────────────┴────────────────────────────────┐
+                                         ▼                                                                 ▼
+                                [ Parallel Agents ]                                              [ Aggregation & Outputs ]
+                                         │                                                                 │
+  ┌──────────────────────────────────────┼──────────────────────────────────────┐                          │
+  │ • Scam Detection Agent (EasyOCR)     │ • Fraud Graph Agent (PageRank/Louvain)│                          ▼
+  │ • Voice Intelligence Agent (Whisper) │ • Geospatial Agent (DBSCAN Hotspots) │                  [ Risk Aggregator ]
+  │ • Counterfeit Agent (YOLO check)     │ • Legal RAG Assistant (Qdrant Search)│                          │
+  └──────────────────────────────────────┴──────────────────────────────────────┘                          ▼
+                                                                                                  [ Evidence compiler ]
+                                                                                                           │
+                                                                                                           ▼
+                                                                                                  [ BNS FIR Report ]
 ```
 
-### Orchestration (LangGraph State Machine)
-
-```
-               [ START ]
-                   │
-                   ▼
-         route_evidence()  (conditional fan-out)
-        /        │        \          \           \
-       ▼         ▼         ▼           ▼           ▼
-  scam_agent  graph_agent  geo_agent  voice_agent  counterfeit_agent
-       \        │         /           /           /
-        ▼       ▼        ▼           ▼           ▼
-              risk_aggregation_node()
-                   │
-                   ▼
-          should_run_rag()  (conditional gate)
-             /         \
-   (if query) ▼         ▼ (no query)
-        rag_agent        │
-              \          │
-               ▼         ▼
-           evidence_agent_node()
-                   │
-                   ▼
-                [ END ]
-```
-
-Evidence is only routed to agents relevant to the inputs present (e.g. the voice agent only runs if an audio file was uploaded). All active branches converge at a single risk-aggregation step before optional legal research and final report generation.
+### System Layers:
+1.  **Ingestion & Client Gateway (React Dashboard)**: Initiates inputs and displays live progress, risk indicators, interactive fraud ring SVGs, maps, and RAG chats.
+2.  **API Gateway Routing (FastAPI)**: Handles request parsing, triggers database pipelines, and forwards streams to the LangGraph engine.
+3.  **State Machine Orchestrator (LangGraph)**: Executes conditional fan-out. Runs only the agents matching uploaded evidence (e.g. runs Voice Agent only if audio file is uploaded).
+4.  **Specialist Cognitive Agents**: Execute specialized analysis in parallel.
+5.  **Risk Aggregator & Correlation (Fusion)**: Cross-references suspect phone/UPI numbers, propagates confidence weights, deducts safety penalties, and computes the final risk index.
+6.  **Evidence & Report Compiler**: Generates FIR drafts, legal section maps, and attaches a SHA256 Chain of Custody hashes manifest.
 
 ---
 
-## 🤖 Multi-Agent Workflow
+## 🤖 AI Agent Workflow
 
-| Agent | Purpose | Core Technique | Fallback |
-|---|---|---|---|
-| **Scam Detection** | Classify fraud intent from text/OCR | Zero-shot XLM-RoBERTa + EasyOCR/PyMuPDF | Rule-based keyword/intent scoring |
-| **Voice Intelligence** | Detect cloned voices & coercive tactics | Whisper transcription + Librosa spectral analysis (AASIST) | — |
-| **Counterfeit Currency** | Verify banknote authenticity | Custom YOLO detector (security thread, watermark, microprint) | — |
-| **Fraud Graph Intelligence** | Expose fraud rings & key entities | PageRank + Louvain community detection over Neo4j | In-memory NetworkX graph |
-| **Geospatial Intelligence** | Identify hotspots & patrol routes | DBSCAN with haversine distance (2 km radius) | Simulated coordinate baseline |
-| **Hybrid RAG Copilot** | Answer legal/investigative questions | BGE-M3 embeddings + Qdrant + BM25 + RRF + cross-encoder rerank | Local keyword search index |
-| **Evidence / FIR Generation** | Produce the final case file | Weighted logarithmic risk fusion → BNS-mapped FIR draft | — |
-
----
-
-## 🛠️ Tech Stack
-
-**Backend & Orchestration:** Python, FastAPI, LangGraph, LangChain, Pydantic, SQLAlchemy, Loguru, Uvicorn
-
-**AI / ML:** XLM-RoBERTa (zero-shot), OpenAI Whisper, EasyOCR, Ultralytics YOLO, Librosa, BGE-M3, BM25 (rank-bm25), cross-encoder rerankers, PyTorch, scikit-learn
-
-**Graph & Spatial Analytics:** NetworkX (PageRank, Louvain), DBSCAN, Neo4j (optional), GeoPandas, Folium
-
-**Data Stores:** PostgreSQL, Redis, Neo4j, Qdrant, MinIO (all optional — with in-memory fallbacks)
-
-**Frontend:** React 19, Vite, React Router, Tailwind CSS v4, Recharts, Lucide Icons, custom SVG rendering
-
-**Document/Vision Processing:** PyMuPDF, pypdf, python-docx, pytesseract, OpenCV, Pillow
-
----
-
-## 📂 Project Structure
-
+```text
+ [ Incident Complaint Ingestion ]
+               │
+               ▼
+       [ state Router ] ─── (Fan-Out) ───► [ Scam Agent (Text NLP / OCR) ]
+               │                          ► [ Voice Agent (Whisper transcription & Deepfake checks) ]
+               │                          ► [ Counterfeit Agent (YOLO check on banknote images) ]
+               │                          ► [ Fraud Graph Agent (Neo4j PageRank community clustering) ]
+               │                          ► [ Geospatial Agent (DBSCAN hotspot coordinates mapping) ]
+               │                                       │
+               ▼                                       ▼
+      [ Converge Node ] ◄──────────────────────── (Gather)
+               │
+               ▼
+     [ Risk Aggregator ] ───► [ RAG Copilot Gate ] ───► [ Evidence Compiler (FIR Report) ]
 ```
+
+1.  **Complaint Ingestion**: Input case data is mapped to the global thread `AgentState`.
+2.  **State Routing**: The state router analyzes present fields and executes active sub-agent branches asynchronously.
+3.  **Parallel Specialist Executions**: Agents return confidence rates, execution times, and logs.
+4.  **Convergence & Risk Aggregation**: Results are parsed, cross-referenced, and overall risk levels (CRITICAL, HIGH, etc.) are computed.
+5.  **RAG Copilot Gate**: Intercepts active queries. If an officer asks a legal query, embeddings retrieve BNS/IT Act precedents.
+6.  **Evidence Compilation**: Custody SHA256 hashes are recorded and reports are exported.
+
+---
+
+## 📂 Project Folder Layout
+
+```text
 sentinelshield-ai/
 ├── main.py                     # FastAPI REST API Gateway entrypoint
-├── requirements.txt             # Python dependency manifest
-├── services/                    # Multi-agent logic
-│   ├── orchestrator/            # LangGraph state machine (graph.py, nodes.py, router.py)
-│   ├── scam_agent/              # Text & OCR scam classifier
-│   ├── voice_agent/              # Deepfake audio detection
-│   ├── counterfeit_agent/        # Banknote verification
-│   ├── graph_agent/              # PageRank / Louvain fraud network mapping
-│   ├── geo_agent/                # DBSCAN coordinate clustering & hotspots
-│   ├── rag_agent/                # Legal search RAG copilot
-│   └── evidence_agent/           # FIR generator and report compiler
-├── shared/                      # Shared models, schemas, configuration
-│   ├── config.py                 # Singleton Settings loader (env vars)
-│   ├── db.py                     # SQL, Redis, Neo4j, Qdrant connectors
-│   └── schemas.py                 # Cross-agent shared Pydantic schemas
-└── frontend/                     # React web portal
-    ├── index.html
-    ├── package.json
-    └── src/
-        ├── App.jsx                # Dashboard workspace panel views
-        ├── index.css              # Tailwind v4 directives and theme
-        └── main.jsx               # React root renderer
+├── requirements.txt            # Python dependency manifest
+├── services/                   # Multi-agent services
+│   ├── orchestrator/           # LangGraph State Machine (graph.py, nodes.py, router.py)
+│   ├── scam_agent/             # Text classification & EasyOCR pipeline
+│   ├── voice_agent/            # Audio transcription & deepfake spectral checks
+│   ├── counterfeit_agent/      # Rupee banknote security checks
+│   ├── graph_agent/            # Neo4j and NetworkX fraud ring detection
+│   ├── geo_agent/              # DBSCAN geospatial coordinate clustering
+│   ├── rag_agent/              # Embedding generation & Qdrant statute search
+│   └── evidence_agent/         # SHA256 custody logging & FIR compiler
+├── shared/                     # Configuration and Pydantic schemas
+│   ├── config.py               # Environments variable loader (.env)
+│   ├── db.py                   # Connectors for Neo4j, Qdrant, PostgreSQL
+│   └── schemas.py              # Cross-agent type declarations
+└── frontend/                   # React dashboard
 ```
-
----
-
-## 🖥️ Screenshots
-
-![Overview Dashboard](docs/screenshots/overview.png)
-![Fraud Graph Analyzer](docs/screenshots/fraud-graph.png)
 
 ---
 
 ## ⚙️ Installation & Setup
 
-### Prerequisites
-- Node.js v18+
-- Python 3.12 or 3.14
-
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/<your-username>/SentinelShield-AI.git
-cd SentinelShield-AI
+git clone https://github.com/your-username/SentinelShield.git
+cd SentinelShield
 ```
 
-### 2. Backend setup
-```bash
-# Minimal install (runs fully in simulation/fallback mode)
-pip install fastapi uvicorn pydantic pydantic-settings python-multipart loguru networkx sqlalchemy
-
-# Full install (enables real ML models — heavier, requires more disk/RAM)
-pip install -r requirements.txt
-```
-
-### 3. Frontend setup
-```bash
-cd frontend
-npm install
-```
-
-### 4. Configure environment variables
-Copy the example file and fill in what you need (see [Environment Variables](#-environment-variables)):
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env` in the root directory:
 ```bash
 cp .env.example .env
 ```
+*SentinelShield operates in graceful fallback/simulation mode if keys are omitted.*
+
+### 3. Backend Setup & Run
+Create a virtual environment and install dependencies:
+```bash
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+Start the FastAPI server:
+```bash
+python main.py
+```
+*Gateway starts at `http://localhost:8000`.*
+
+### 4. Frontend Setup & Run
+In a new terminal window:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*React app loads at `http://localhost:5173/`.*
 
 ---
 
 ## 🔑 Environment Variables
 
-All configuration is loaded from a `.env` file at the project root via `shared/config.py`. Every value has a safe default, so the app boots even with an empty `.env`.
+Selected configuration variables (see [.env.example](.env.example) for a complete list):
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `DEBUG` | `false` | Toggle FastAPI debug mode |
-| `SECRET_KEY` | `change-me-in-production` | App secret key |
-| `POSTGRES_HOST` / `PORT` / `DB` / `USER` / `PASSWORD` | `localhost` / `5432` / `sentinelshield` / `sentinel` / `sentinel_pass` | PostgreSQL connection |
-| `REDIS_HOST` / `PORT` / `DB` | `localhost` / `6379` / `0` | Redis cache connection |
-| `NEO4J_URI` / `USER` / `PASSWORD` | `bolt://localhost:7687` / `neo4j` / `neo4j_pass` | Fraud graph database |
-| `QDRANT_HOST` / `PORT` / `API_KEY` | `localhost` / `6333` / — | Vector database for RAG |
-| `MINIO_ENDPOINT` / `ACCESS_KEY` / `SECRET_KEY` | `localhost:9000` / `minioadmin` / `minioadmin` | Evidence/report object storage |
-| `LLM_PROVIDER` | `huggingface` | `huggingface` \| `groq` \| `openai` \| `gemini` \| `local` |
-| `LLM_MODEL_NAME` | `mistralai/Mistral-7B-Instruct-v0.3` | Model used for generation |
-| `HUGGINGFACEHUB_API_TOKEN` / `GROQ_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | — | Provider API keys (only needed for the provider you select) |
-| `EMBEDDING_MODEL` | `BAAI/bge-m3` | RAG embedding model |
-| `WHISPER_MODEL_SIZE` / `WHISPER_DEVICE` | `base` / `cpu` | Voice transcription model |
-| `YOLO_MODEL_PATH` / `YOLO_CONFIDENCE` | `shared/weights/yolo_currency.pt` / `0.6` | Counterfeit currency detector |
-| `SCAM_CLASSIFIER_MODEL` / `SCAM_RISK_THRESHOLD` | `joeddav/xlm-roberta-large-xnli` / `0.5` | Scam intent classifier |
-| `RAG_TOP_K` / `RAG_RERANKER_MODEL` | `5` / `cross-encoder/ms-marco-MiniLM-L-6-v2` | RAG retrieval settings |
-
-> None of these are required to run the demo — leave `.env` empty (or omit it) and every agent automatically uses its local fallback.
+- `DEBUG`: Toggle FastAPI debug mode (`true`/`false`).
+- `NEO4J_URI` / `USER` / `PASSWORD`: Bolt connection parameters for the Neo4j Graph DB.
+- `QDRANT_HOST` / `PORT`: Qdrant vector database parameters.
+- `LLM_PROVIDER`: Selected LLM Gateway (`huggingface`/`groq`/`openai`/`gemini`).
+- `HUGGINGFACEHUB_API_TOKEN` / `GROQ_API_KEY` / `OPENAI_API_KEY`: Selected gateway provider keys.
 
 ---
 
-## 🚀 Running the Application
+## 🔌 API Gateway Endpoints
 
-### Step 1 — Start the backend
-```bash
-python main.py
-```
-Server starts at **`http://localhost:8000`**.
+- `POST /api/pipeline/upload` — Multipart form upload. Evaluates statement text, lat/lon, audio, and image evidence. Returns risk metrics and BNS FIR drafts.
+- `POST /api/agents/rag` — JSON payload. Queries RAG Legal Copilot.
+- `GET /health` — API health check.
 
-### Step 2 — Start the frontend (in a second terminal)
-```bash
-cd frontend
-npm run dev
-```
-Portal loads at **`http://localhost:5173`**.
-
-### Frontend-only mode (no backend running)
-Set `USE_MOCKS = true` in the frontend config to develop the UI entirely against mocked JSON fixtures — useful while backend agents are still being built.
+*See complete specifications in [DOCUMENTATION.md](DOCUMENTATION.md#-3-complete-api-specifications).*
 
 ---
 
-## 🔌 API Reference
+## 🏗️ Design Decisions & Tradeoffs
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/pipeline/upload` | `POST` | Full multi-agent pipeline. Accepts `multipart/form-data`: statement text, complainant name/contact, lat/lon, optional audio file, optional image file. Returns risk score, risk level, evidence package (FIR draft, executive summary, sections, recommended actions), and each agent's raw result. |
-| `/api/agents/rag` | `POST` | Ask the Investigation Copilot a legal/case question. Body: `{ query, case_id, top_k }`. Returns answer, citations, similar case IDs, confidence, tokens used. |
-| `/api/agents/scam/upload` | `POST` | Standalone scam classification for text or image. |
-| `/api/agents/voice/upload` | `POST` | Standalone deepfake/voice-cloning classification for an audio file. |
-| `/api/agents/counterfeit/upload` | `POST` | Standalone banknote authenticity check for an image. |
-
-<details>
-<summary><strong>Example response — <code>POST /api/pipeline/upload</code></strong></summary>
-
-```json
-{
-  "case_id": "CASE-2026-9081",
-  "overall_risk_score": 0.88,
-  "risk_level": "HIGH",
-  "evidence_package": {
-    "fir_draft": "...",
-    "executive_summary": "...",
-    "ipc_sections": ["Section 66D IT Act", "Section 318 BNS"],
-    "recommended_actions": ["..."]
-  },
-  "scam_result": { "risk_score": 0.9, "scam_type": "digital_arrest", "entities": {} },
-  "voice_result": null,
-  "counterfeit_result": null,
-  "graph_result": { "fraud_rings": [], "pagerank_scores": {} },
-  "geo_result": { "hotspots": [], "patrol_recommendations": [] },
-  "errors": []
-}
-```
-</details>
+- **Why FastAPI & Uvicorn**: Selected for high-concurrency async capabilities. Multi-part form stream parser allows simultaneous audio and image uploads.
+- **Why LangGraph State Machine**: Basic sequential chains crash if intermediate nodes fail. LangGraph allows conditional routing and converges gracefully to aggregation nodes.
+- **Why In-Memory Fallbacks**: For hackathons and deployability, requiring a complete suite of active databases (Neo4j, Qdrant, Postgres) raises developer friction. Auto-degradation to NetworkX and local BM25 guarantees a 100% functional portal offline.
 
 ---
 
-## 🔄 Simulation Mode & Graceful Fallbacks
+## 🛣️ Limitations & Roadmap
 
-SentinelShield AI runs fully interactive and demoable even without GPUs, paid API keys, or provisioned databases:
+### Current Limitations:
+1.  **Prototype Dataset**: Local databases index simulated case dockets and regional coordinates.
+2.  **Static RAG Corpus**: legal corpus includes selected BNS and IT Act sections; it does not represent the complete Indian penal code.
+3.  **Simulation Mode default**: Complex deep learning models (XLM-RoBERTa, Librosa deepfake checks) use heuristics if local GPU weights are uninstalled.
 
-| Component | Full implementation | Fallback |
-|---|---|---|
-| Scam classification | Zero-shot XLM-RoBERTa transformer | Rule-based keyword/intent triggers |
-| Fraud graph | Neo4j graph database | In-memory NetworkX (PageRank + Louvain) |
-| Geospatial clustering | Historical coordinate baselines | Locally simulated complaint coordinates |
-| Legal RAG search | Qdrant + BM25 + cross-encoder rerank | Local keyword search index |
-
-The frontend's connection badge reflects this: **`AGENT HOST ONLINE`** (full backend) or **`SIMULATION MODE`** (fallback logic only) — the demo works identically either way.
-
----
-
-## 👥 Team & Contributions
-
-Built for a team hackathon under the theme of fraud detection and citizen safety. Responsibilities were split by layer:
-
-| Contributor | Role | Scope |
-|---|---|---|
-| **Mayank Raj** | Backend & Orchestrator | FastAPI gateway (`main.py`), LangGraph state machine (`services/orchestrator/`), risk aggregation engine |
-| **Gaurav Kumar Chaudhary** | AI Agents Engineer | Scam detection, voice intelligence (deepfake), and counterfeit currency agents |
-| **Avik Sarkar** | Data & Intelligence Engineer | Fraud graph (PageRank/Louvain), geospatial (DBSCAN) agent, hybrid RAG copilot, and evidence/FIR generation agent |
-| **Nikhil Kumar** | Frontend / Web Developer | React (Vite) investigation portal — built independently against mocked JSON (`USE_MOCKS` toggle) in parallel with backend development, then wired to the live API |
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Integrate live bank/UPI transaction APIs for real-time transaction-graph enrichment
-- [ ] Connect to national/state crime-record databases to replace simulated geospatial baselines
-- [ ] Add authenticated, role-based access for citizens, bank compliance teams, and law enforcement
-- [ ] Expand the RAG copilot's legal corpus to additional statutes and case law
-- [ ] Deploy the orchestrator and agents as independently scalable microservices
-- [ ] Add automated tests and CI pipeline
+### Future Roadmap:
+- **v1.0 (Hackathon Release)**: Interactive React dashboard, multi-agent parallel LangGraph execution, and core fallbacks. *(Current Version)*
+- **v2.0 (Law Enforcement Beta)**: Integration with live bank transactional feeds and cellular trace logs. Role-based login panels.
+- **v3.0 (Government Deployment)**: Production connection to national crime record networks. Live CCTV spatial tracking.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome. To contribute:
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m "Add your feature"`
-4. Push to your branch: `git push origin feature/your-feature`
-5. Open a Pull Request
-
-Please open an issue first for major changes to discuss what you'd like to change.
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on coding standards, commit messages, and branch naming conventions.
 
 ---
 
 ## 📄 License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-**SentinelShield AI** — Predict. Prevent. Protect.
-
-</div>

@@ -25,9 +25,19 @@ def evidence_agent_node(state: dict) -> dict:
         return {"evidence_package": result, "overall_risk_score": result.overall_risk_score}
     except Exception as e:
         logger.error(f"[EvidenceAgent] Node error: {e}")
+        from shared.schemas import EvidencePackage, RiskLevel
+        result = EvidencePackage(
+            status="FAILED",
+            reason=str(e),
+            case_id=state.get("case_id", "UNKNOWN"),
+            overall_risk_score=0.0,
+            risk_level=RiskLevel.LOW,
+            explanation=f"Evidence agent node encountered exception: {str(e)}"
+        )
         errors = list(state.get("errors", []))
         errors.append(f"evidence_agent: {str(e)}")
-        return {"errors": errors}
+        return {"evidence_package": result, "errors": errors}
+
 
 
 def run(case_id: str, **kwargs):

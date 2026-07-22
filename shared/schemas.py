@@ -47,11 +47,20 @@ class InputType(str, Enum):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class BaseAgentResult(BaseModel):
-    """Common fields on every agent output."""
+    """Common fields on every agent output for logging and metrics."""
     agent_name: str
-    processing_time_ms: float = 0.0
+    status: str = "SUCCESS"  # "SUCCESS" | "FAILED" | "SKIPPED"
+    reason: str | None = None  # Reason for FAILED/SKIPPED status
+    warning: str | None = None  # Single warning string
+    warnings: list[str] = Field(default_factory=list)  # Detailed list of warnings
+    execution_time_ms: float = 0.0
+    processing_time_ms: float = 0.0  # Kept for backward compatibility
+    confidence: float = Field(0.0, ge=0.0, le=1.0)
+    explanation: str = ""
     error: str | None = None
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metrics: dict[str, Any] = Field(default_factory=dict)  # Memory, sizes, count stats
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -59,14 +68,17 @@ class BaseAgentResult(BaseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class ExtractedEntities(BaseModel):
-    phone_numbers: list[str] = []
-    upi_ids: list[str] = []
-    bank_accounts: list[str] = []
-    urls: list[str] = []
-    amounts: list[str] = []
-    names: list[str] = []
-    emails: list[str] = []
-    ip_addresses: list[str] = []
+    phone_numbers: list[str] = Field(default_factory=list)
+    upi_ids: list[str] = Field(default_factory=list)
+    bank_accounts: list[str] = Field(default_factory=list)
+    urls: list[str] = Field(default_factory=list)
+    amounts: list[str] = Field(default_factory=list)
+    names: list[str] = Field(default_factory=list)
+    emails: list[str] = Field(default_factory=list)
+    ip_addresses: list[str] = Field(default_factory=list)
+    domains: list[str] = Field(default_factory=list)
+    wallet_ids: list[str] = Field(default_factory=list)
+    locations: list[str] = Field(default_factory=list)
 
 
 class ScamDetectionResult(BaseAgentResult):
@@ -79,7 +91,10 @@ class ScamDetectionResult(BaseAgentResult):
     explanation: str
     language: str = "en"
     ocr_text: str | None = None
-    intent_flags: dict[str, bool] = {}   # urgency, impersonation, payment_request
+    intent_flags: dict[str, bool] = Field(default_factory=dict)   # urgency, impersonation, payment_request
+    confidence_breakdown: dict[str, float] = Field(default_factory=dict)
+    ocr_confidence: float | None = None
+    intermediate_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ScamDetectionInput(BaseModel):
@@ -107,6 +122,12 @@ class VoiceIntelligenceResult(BaseAgentResult):
     risk_score: float = Field(0.0, ge=0.0, le=1.0)
     risk_level: RiskLevel = RiskLevel.LOW
     explanation: str = ""
+    
+    # Explainability & Quality Metrics
+    audio_quality: str = "average"  # "excellent" | "good" | "average" | "poor"
+    suspicious_timestamps: list[dict[str, Any]] = Field(default_factory=list)  # {"timestamp": "00:42", "phrase": "..."}
+    speaker_confidence: float = 0.0
+    transcription_confidence: float = 0.0
 
 
 class VoiceIntelligenceInput(BaseModel):
@@ -125,6 +146,14 @@ class SecurityFeatureCheck(BaseModel):
     color_shift: str = "unknown"
     serial_pattern: str = "unknown"
     uv_feature: str = "unknown"
+    
+    # Feature confidences
+    security_thread_conf: float = 0.0
+    watermark_conf: float = 0.0
+    microprint_conf: float = 0.0
+    color_shift_conf: float = 0.0
+    serial_pattern_conf: float = 0.0
+    uv_feature_conf: float = 0.0
 
 
 class CounterfeitDetectionResult(BaseAgentResult):
@@ -154,20 +183,24 @@ class FraudRing(BaseModel):
     members: list[str]
     size: int
     risk_level: RiskLevel
-    fraud_types: list[str] = []
+    fraud_types: list[str] = Field(default_factory=list)
 
 
 class FraudGraphResult(BaseAgentResult):
     agent_name: str = "fraud_graph_agent"
-    entities_added: list[str] = []
+    entities_added: list[str] = Field(default_factory=list)
     edges_added: int = 0
-    fraud_rings: list[FraudRing] = []
-    pagerank_scores: dict[str, float] = {}
-    connected_complaints: list[str] = []
-    high_risk_nodes: list[str] = []
+    fraud_rings: list[FraudRing] = Field(default_factory=list)
+    pagerank_scores: dict[str, float] = Field(default_factory=dict)
+    connected_complaints: list[str] = Field(default_factory=list)
+    high_risk_nodes: list[str] = Field(default_factory=list)
     risk_score: float = Field(0.0, ge=0.0, le=1.0)
     risk_level: RiskLevel = RiskLevel.LOW
     explanation: str = ""
+    
+    # Graph Edge Metadata
+    graph_explanations: list[str] = Field(default_factory=list)
+    edges_metadata: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class FraudGraphInput(BaseModel):
@@ -192,12 +225,20 @@ class Hotspot(BaseModel):
 
 class GeoIntelligenceResult(BaseAgentResult):
     agent_name: str = "geo_intelligence_agent"
-    hotspots: list[Hotspot] = []
+    hotspots: list[Hotspot] = Field(default_factory=list)
     heatmap_html_path: str | None = None
-    patrol_recommendations: list[str] = []
-    temporal_trend: dict[str, int] = {}  # hour/day → count
+    patrol_recommendations: list[str] = Field(default_factory=list)
+    temporal_trend: dict[str, int] = Field(default_factory=dict)  # hour/day → count
     total_complaints_analyzed: int = 0
-    risk_zones: list[dict[str, Any]] = []
+    risk_zones: list[dict[str, Any]] = Field(default_factory=list)
+    risk_score: float = Field(0.0, ge=0.0, le=1.0)
+    risk_level: RiskLevel = RiskLevel.LOW
+    
+    # Trends & Explainability
+    temporal_hotspots: list[dict[str, Any]] = Field(default_factory=list)
+    historical_trends: dict[str, Any] = Field(default_factory=dict)
+    confidence_interval: list[float] = Field(default_factory=list)  # [min_lat, max_lat, min_lon, max_lon]
+    hotspot_explanation: str = ""
 
 
 class GeoIntelligenceInput(BaseModel):
@@ -222,10 +263,17 @@ class Citation(BaseModel):
 class RAGCopilotResult(BaseAgentResult):
     agent_name: str = "rag_copilot_agent"
     answer: str = ""
-    citations: list[Citation] = []
-    similar_cases: list[str] = []
+    citations: list[Citation] = Field(default_factory=list)
+    similar_cases: list[str] = Field(default_factory=list)
     confidence: float = Field(0.0, ge=0.0, le=1.0)
     tokens_used: int = 0
+    
+    # Transparency & Hallucination Guard
+    retrieved_document_count: int = 0
+    retrieved_document_ids: list[str] = Field(default_factory=list)
+    top_chunks: list[dict[str, Any]] = Field(default_factory=list)
+    retrieval_confidence: float = 0.0
+    hallucination_guard_triggered: bool = False
 
 
 class RAGCopilotInput(BaseModel):
@@ -244,6 +292,12 @@ class EvidenceItem(BaseModel):
     file_type: str
     sha256: str
     description: str
+    source_agent: str = "unknown"
+    confidence: float = 0.0
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    case_id: str = "unknown"
+    evidence_type: str = "unknown"
+    version: str = "1.0"
 
 
 class EvidencePackage(BaseAgentResult):
@@ -254,9 +308,13 @@ class EvidencePackage(BaseAgentResult):
     fir_draft: str = ""
     executive_summary: str = ""
     investigation_report_path: str | None = None
-    evidence_manifest: list[EvidenceItem] = []
-    ipc_sections: list[str] = []
-    recommended_actions: list[str] = []
+    evidence_manifest: list[EvidenceItem] = Field(default_factory=list)
+    ipc_sections: list[str] = Field(default_factory=list)
+    recommended_actions: list[str] = Field(default_factory=list)
+    
+    # Chain of Custody & Audit
+    chain_of_custody: list[EvidenceItem] = Field(default_factory=list)
+    skipped_agents: list[dict[str, str]] = Field(default_factory=list)  # [{"agent_name": "...", "reason": "..."}]
 
 
 class EvidenceGenerationInput(BaseModel):
@@ -275,10 +333,19 @@ class EvidenceGenerationInput(BaseModel):
 # LangGraph Orchestrator State
 # ─────────────────────────────────────────────────────────────────────────────
 
+def reduce_errors(left: list[str], right: list[str]) -> list[str]:
+    """Reducer to merge concurrent list updates in parallel branches."""
+    merged = list(left)
+    for err in right:
+        if err not in merged:
+            merged.append(err)
+    return merged
+
+
 class AgentState(BaseModel):
     """Full state object passed through the LangGraph pipeline."""
     case_id: str
-    input_types: list[InputType] = []
+    input_types: list[InputType] = Field(default_factory=list)
 
     # Raw inputs
     text_input: str | None = None
@@ -288,6 +355,10 @@ class AgentState(BaseModel):
     officer_query: str | None = None
     lat: float | None = None
     lon: float | None = None
+    complaint_type: str | None = None
+    input_type: str | None = None
+    priority: str | None = None
+    language: str | None = None
 
     # Agent outputs
     scam_result: ScamDetectionResult | None = None
@@ -301,5 +372,5 @@ class AgentState(BaseModel):
     # Aggregated
     overall_risk_score: float = 0.0
     risk_level: RiskLevel = RiskLevel.LOW
-    errors: list[str] = []
-    metadata: dict[str, Any] = {}
+    errors: list[str] = Field(default_factory=reduce_errors)
+    metadata: dict[str, Any] = Field(default_factory=dict)

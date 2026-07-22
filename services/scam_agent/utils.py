@@ -19,8 +19,11 @@ _URL_RE = re.compile(r"https?://[^\s]+|www\.[^\s]+", re.I)
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 _BANK_ACCT_RE = re.compile(r"\b\d{9,18}\b")
 _IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+_WALLET_RE = re.compile(r"\b0x[a-fA-F0-9]{40}\b|\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b|\bbc1[a-zA-Z0-9]{25,39}\b", re.I)
+_PINCODE_RE = re.compile(r"\b[1-9]\d{5}\b")
 
 # High-signal scam keywords (multilingual common terms transliterated)
+
 SCAM_KEYWORDS = [
     # English
     "arrest", "warrant", "narcotics", "cbi", "iti", "cybercrime", "aadhaar linked",
@@ -54,17 +57,52 @@ def clean_text(text: str) -> str:
 def extract_entities(text: str) -> dict[str, list[str]]:
     """
     Pure regex-based entity extraction.
-    Returns phone numbers, UPI IDs, amounts, URLs, emails, bank accounts, IPs.
+    Returns phone numbers, UPI IDs, amounts, URLs, emails, bank accounts, IPs, domains, wallet_ids, locations.
     """
+    from urllib.parse import urlparse
+    urls = list(set(_URL_RE.findall(text)))
+    
+    # Domain extraction
+    domains = []
+    for url in urls:
+        try:
+            parsed = urlparse(url)
+            netloc = parsed.netloc or url.split('/')[0]
+            netloc = netloc.split(':')[0].strip().lower()
+            if netloc:
+                domains.append(netloc)
+        except Exception:
+            pass
+            
+    # Location keywords
+    cities = [
+        "mumbai", "delhi", "bengaluru", "bangalore", "hyderabad", "ahmedabad", "chennai", "kolkata", "surat", 
+        "pune", "jaipur", "lucknow", "kanpur", "nagpur", "indore", "thane", "bhopal", "visakhapatnam", "patna", 
+        "vadodara", "ghaziabad", "ludhiana", "agra", "nashik", "faridabad", "meerut", "rajkot", "varanasi", 
+        "srinagar", "aurangabad", "dhanbad", "amritsar", "allahabad", "howrah", "ranchi", "gwalior", "jabalpur", 
+        "coimbatore", "vijayawada", "jodhpur", "madurai", "raipur", "kota", "guwahati", "chandigarh", "solapur", 
+        "gurgaon", "gurugram", "aligarh", "jalandhar", "bhubaneswar", "salem", "warangal", "guntur", "saharanpur", 
+        "gorakhpur", "trivandrum", "thiruvananthapuram", "jamshedpur", "amravati", "noida"
+    ]
+    locations = list(set(_PINCODE_RE.findall(text)))
+    lower_text = text.lower()
+    for city in cities:
+        if city in lower_text:
+            locations.append(city.title())
+            
     return {
         "phone_numbers": list(set(_PHONE_RE.findall(text))),
         "upi_ids": list(set(_UPI_RE.findall(text))),
         "amounts": list(set(_AMOUNT_RE.findall(text))),
-        "urls": list(set(_URL_RE.findall(text))),
+        "urls": urls,
         "emails": list(set(_EMAIL_RE.findall(text))),
-        "bank_accounts": list(set(_BANK_ACCT_RE.findall(text)))[:10],  # limit noise
+        "bank_accounts": list(set(_BANK_ACCT_RE.findall(text)))[:10],
         "ip_addresses": list(set(_IP_RE.findall(text))),
+        "domains": list(set(domains)),
+        "wallet_ids": list(set(_WALLET_RE.findall(text))),
+        "locations": list(set(locations)),
     }
+
 
 
 def detect_intent_flags(text: str) -> dict[str, bool]:

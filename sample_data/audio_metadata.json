@@ -1,0 +1,17 @@
+{
+  "file_name": "sample_call_arrest.wav",
+  "purpose": "Voice Intelligence Agent cloning audit demo",
+  "audio_duration_seconds": 18.2,
+  "speaker_count": 1,
+  "emotion_signature": "aggressive / threatening",
+  "expected_transcript": "This is Deputy Commissioner Sanjay Sharma. You are under digital arrest. Transfer fifty thousand rupees to the designated verification account immediately or you will be arrested.",
+  "expected_metrics": {
+    "is_deepfake": true,
+    "deepfake_confidence": 0.98,
+    "audio_quality": "excellent",
+    "suspicious_timestamps": [
+      { "timestamp": "00:04", "phrase": "under digital arrest" },
+      { "timestamp": "00:09", "phrase": "Transfer fifty thousand rupees" }
+    ]
+  }
+}

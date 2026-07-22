@@ -1,13 +1,14 @@
 """
 LangGraph Orchestrator — Node Wrappers
 Each node wraps a corresponding agent and handles state in/out.
-Also includes the risk aggregation node.
+Also includes the risk aggregation node wrapper.
 """
 
 from __future__ import annotations
 from loguru import logger
 
 from shared.schemas import RiskLevel
+from shared.fusion import calculate_aggregated_risk
 
 # Import all agent nodes
 from services.scam_agent.agent import scam_agent_node
@@ -19,34 +20,30 @@ from services.rag_agent.agent import rag_agent_node
 from services.evidence_agent.agent import evidence_agent_node
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# LangGraph Node
+# ─────────────────────────────────────────────────────────────────────────────
+
 def risk_aggregation_node(state: dict) -> dict:
     """
-    Combines risk scores from completed agents into overall_risk_score and risk_level.
-    Called after the parallel fan-out phase completes.
+    LangGraph Node Wrapper for risk aggregation.
+    Combines agent scores and stores correlation details in the metadata.
     """
-    scores = []
-    for key in ["scam_result", "voice_result", "counterfeit_result", "graph_result"]:
-        result = state.get(key)
-        if result and hasattr(result, "risk_score") and result.risk_score is not None:
-            scores.append(result.risk_score)
+    overall, level, correlations, fused_entities, overall_confidence = calculate_aggregated_risk(state)
+    
+    metadata = dict(state.get("metadata", {}))
+    metadata["correlations"] = correlations
+    metadata["fused_entities"] = fused_entities
+    metadata["overall_confidence"] = overall_confidence
 
-    if not scores:
-        overall = 0.0
-    else:
-        # Weighted: highest score gets the most influence
-        scores_sorted = sorted(scores, reverse=True)
-        weights = [1 / (2**i) for i in range(len(scores_sorted))]
-        overall = sum(s * w for s, w in zip(scores_sorted, weights)) / sum(weights)
-        overall = round(overall, 4)
 
-    if overall >= 0.80:
-        level = RiskLevel.CRITICAL
-    elif overall >= 0.55:
-        level = RiskLevel.HIGH
-    elif overall >= 0.30:
-        level = RiskLevel.MEDIUM
-    else:
-        level = RiskLevel.LOW
+    logger.info(
+        f"[Orchestrator] Aggregated Risk: score={overall:.4f}, level={level.value}, "
+        f"correlations={len(correlations)}"
+    )
 
-    logger.info(f"[Orchestrator] Risk aggregation: score={overall:.2f}, level={level.value}")
-    return {"overall_risk_score": overall, "risk_level": level}
+    return {
+        "overall_risk_score": overall,
+        "risk_level": level,
+        "metadata": metadata,
+    }

@@ -31,9 +31,20 @@ def scam_agent_node(state: dict) -> dict:
         return {"scam_result": result}
     except Exception as e:
         logger.error(f"[ScamAgent] Node error: {e}")
+        from shared.schemas import ScamDetectionResult, RiskLevel, ScamType
+        result = ScamDetectionResult(
+            status="FAILED",
+            reason=str(e),
+            risk_score=0.0,
+            risk_level=RiskLevel.LOW,
+            scam_type=ScamType.UNKNOWN,
+            confidence=0.0,
+            explanation=f"Scam agent node encountered exception: {str(e)}"
+        )
         errors = list(state.get("errors", []))
         errors.append(f"scam_agent: {str(e)}")
-        return {"errors": errors}
+        return {"scam_result": result, "errors": errors}
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

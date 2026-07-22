@@ -1,185 +1,190 @@
-# 📚 SentinelShield AI — Complete Developer & System Documentation
+# 📚 SentinelShield AI — System Design & API Manual
 
-This documentation provides a deep-dive technical manual for developers, system architects, and investigators deploying, extending, or maintaining **SentinelShield AI**.
-
----
-
-## 1. System Architecture & Core Design Goals
-SentinelShield AI is designed around a **multi-agent, parallel fan-out orchestration architecture** built for high availability, graceful degradation, and explainable intelligence. 
-
-### Key System Goals:
-*   **Explainable AI (XAI)**: All agent verdicts must generate confidence scores, intent indicators, and human-readable reasoning to ensure legal and operational transparency.
-*   **Multimodal Fusion**: The platform dynamically routes and aggregates unstructured texts, call recordings, currency photo coordinates, and transaction vectors.
-*   **High Performance**: Agents execute in parallel to minimize response times.
-*   **Graceful Degradation**: If advanced database servers (Neo4j, Qdrant) or heavy deep learning models are unavailable, services fall back automatically to local computations (NetworkX, local keyword indexes, DBSCAN).
+This document provides a comprehensive technical reference for system architects, developers, and safety teams deploying, auditing, or extending **SentinelShield AI**.
 
 ---
 
-## 2. LangGraph State Machine Orchestration
-The coordination of the safety agents is governed by a **StateGraph State Machine** (defined in [graph.py](file:///c:/Users/nikhi/OneDrive/Desktop/genai2/SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform/services/orchestrator/graph.py)).
+## 🏗️ 1. Architecture & Design Decisions
+
+The design of SentinelShield balances **asynchronous multi-modal analysis** with **graceful fail-safe execution** to ensure the platform remains online even during network or database outages.
+
+### Design Tradeoffs & Technology Selections
+
+| Technology | Role | Why Selected | Tradeoffs & Fallbacks |
+|---|---|---|---|
+| **FastAPI** | REST API Gateway | High performance, native async/await, automatic OpenAPI schemas, and ease of file upload streaming. | Synchronous framework code is isolated in background worker threads to prevent event-loop blocks. |
+| **LangGraph** | Multi-Agent Orchestration | StateGraph allows parallel node execution, cycles, conditional routing gates, and unified session state. | Higher complexity than basic LangChain chains; state updates require strict Pydantic schemas. |
+| **Neo4j** | Fraud Graph Database | Property graph modeling allows query-level relationship paths, PageRank centralities, and community clustering. | Can be heavy to host; falls back automatically to an in-memory **NetworkX** instance on failure. |
+| **Qdrant** | Vector Search Engine | Extremely fast dense retrieval, cargo-payload filters, and BM25 sparse matching support. | Requires embedding pipelines; falls back to local BM25 keyword matching models if offline. |
+| **OpenAI Whisper** | Audio Transcription | High accuracy multilingual speech-to-text models, segment-level timestamp outputs. | CPU execution can be slow; falls back to skipped state alerts if sound files are not uploaded. |
+| **Ultralytics YOLO** | Counterfeit currency checks | Rapid real-time bounding box detection for security bands and watermarks. | Requires model weight hosting; falls back gracefully to warning status if image inputs are missing. |
+| **React + Vite** | Operations Portal | Fast HMR, single-page reactive dashboard, interactive canvas drawing via SVG for high rendering performance. | Client-side calculations of coordinates are memoized to prevent re-render delays. |
+
+---
+
+## 📂 2. Folder Layout & Responsibilities
 
 ```text
-              [ START ]
-                  │
-                  ▼
-          route_evidence() (Conditional Fan-Out)
-         /        │       \             \            \
-        ▼         ▼        ▼             ▼            ▼
-   scam_agent  graph_agent  geo_agent  [voice_agent]  [counterfeit_agent]
-        \         │        /             /            /
-         ▼        ▼       ▼             ▼            ▼
-             risk_aggregation_node()
-                  │
-                  ▼
-          should_run_rag() (Conditional Gate)
-                /   \
-  (If query)   ▼     ▼   (No query)
-        rag_agent    │
-               \     │
-                ▼    ▼
-          evidence_agent_node()
-                  │
-                  ▼
-               [ END ]
+sentinelshield-ai/
+├── main.py                     # FastAPI REST API Gateway entrypoint
+├── requirements.txt            # Python dependency manifest
+├── services/                   # Multi-agent services
+│   ├── orchestrator/           # LangGraph State Machine (graph.py, nodes.py, router.py)
+│   ├── scam_agent/             # Text classification & EasyOCR pipeline
+│   ├── voice_agent/            # Audio transcription & deepfake spectral checks
+│   ├── counterfeit_agent/      # Rupee banknote security checks
+│   ├── graph_agent/            # Neo4j and NetworkX fraud ring detection
+│   ├── geo_agent/              # DBSCAN geospatial coordinate clustering
+│   ├── rag_agent/              # Embedding generation & Qdrant statute search
+│   └── evidence_agent/         # SHA256 custody logging & FIR compiler
+├── shared/                     # Configuration and Pydantic schemas
+│   ├── config.py               # Environments variable loader (.env)
+│   ├── db.py                   # Connectors for Neo4j, Qdrant, PostgreSQL
+│   └── schemas.py              # Cross-agent type declarations
+└── frontend/                   # React dashboard
+    ├── index.html              # HTML shell & font preconnect links
+    ├── src/
+    │   ├── App.jsx             # React dashboard operations console
+    │   ├── index.css           # CSS theme and animations
+    │   └── main.jsx            # DOM renderer
 ```
 
-### LangGraph State Variables (`AgentState`)
-The global thread state is defined in [schemas.py](file:///c:/Users/nikhi/OneDrive/Desktop/genai2/SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform/shared/schemas.py):
-*   `case_id`: Core UUID tracking the session.
-*   `text_input` / `audio_path` / `image_path` / `pdf_path`: Input evidence locations.
-*   `lat` / `lon`: GPS coordinates of the report.
-*   `scam_result` / `voice_result` / `counterfeit_result` / `graph_result` / `geo_result` / `rag_result`: Individual agent payloads.
-*   `overall_risk_score`: Aggregated score between `0.0` and `1.0`.
-*   `risk_level`: Enumerated severity (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
-
 ---
 
-## 3. Specialized Multi-Agent Pipelines & Algorithms
-
-### A. Scam Detection Agent
-*   **Source File**: [pipeline.py (Scam Agent)](file:///c:/Users/nikhi/OneDrive/Desktop/genai2/SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform/services/scam_agent/pipeline.py)
-*   **Workflow**: Extracts text using EasyOCR (on images) or PyMuPDF (on documents). Cleans textual syntax, runs entity regex scanners, and executes a zero-shot XLM-RoBERTa model to classify intent flags (threat, urgency, payment requests).
-*   **Fallback**: Standardizes on regex and keyword frequency classification if transformers are uninstalled.
-
-### B. Voice Intelligence Agent
-*   **Source File**: [pipeline.py (Voice Agent)](file:///c:/Users/nikhi/OneDrive/Desktop/genai2/SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform/services/voice_agent/pipeline.py)
-*   **Workflow**: Converts audio to text using OpenAI Whisper. Computes spectrographic anomalies via Librosa/Soundfile to audit for synthetic speech (AASIST deepfake check) and analyzes speaker count and coercive emotional tone.
-
-### C. Counterfeit Currency Agent
-*   **Source File**: [pipeline.py (Counterfeit Agent)](file:///c:/Users/nikhi/OneDrive/Desktop/genai2/SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform/services/counterfeit_agent/pipeline.py)
-*   **Workflow**: Evaluates currency note photos using a custom YOLO object detection network (`yolo_currency.pt`). Checks security bands, watermark segments, serial number alignment, and microtext blur.
-
-### D. Fraud Graph Agent
-*   **Source File**: [pipeline.py (Graph Agent)](file:///c:/Users/nikhi/OneDrive/Desktop/genai2/SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform/services/graph_agent/pipeline.py)
-*   **Workflow**: Normalizes phone numbers/UPIs and ingests them into Neo4j. Executes local NetworkX PageRank centrality calculations to find high-influence nodes and Louvain Community Detection to group linked profiles into suspect fraud rings.
-
-### E. Geospatial Intelligence Agent
-*   **Source File**: [pipeline.py (Geo Agent)](file:///c:/Users/nikhi/OneDrive/Desktop/genai2/SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform/services/geo_agent/pipeline.py)
-*   **Workflow**: IngestsGPS coordinates, applying DBSCAN (Density-Based Spatial Clustering of Applications with Noise) with haversine metrics. Groups coordinates within a $2\text{ km}$ radius to extract high-risk hotspots and drafts deployment coordinates.
-
-### F. Hybrid RAG Copilot Agent
-*   **Source File**: [pipeline.py (RAG Agent)](file:///c:/Users/nikhi/OneDrive/Desktop/genai2/SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform/services/rag_agent/pipeline.py)
-*   **Workflow**: Embeds query sentences via BGE-M3. Executes a dual-pass search: dense retrieval via Qdrant and sparse retrieval via BM25. Combines them using Reciprocal Rank Fusion (RRF), filters them through a Cross-Encoder reranker, and outputs the final answer with source citations.
-
----
-
-## 4. API Endpoints Reference
+## 🔌 3. Complete API Specifications
 
 ### Ingest & Execute Full Multi-Agent Pipeline
-*   **Endpoint**: `POST /api/pipeline/upload`
-*   **Headers**: `Content-Type: multipart/form-data`
-*   **Request Body**:
-    *   `text_input` (string): Text content or WhatsApp statement
-    *   `complainant_name` (string, optional)
-    *   `complainant_contact` (string, optional)
-    *   `lat` (float, optional)
-    *   `lon` (float, optional)
-    *   `audio_file` (binary, optional): Suspect audio call file
-    *   `image_file` (binary, optional): Currency image file
-*   **Response Payload (`200 OK`)**:
-    ```json
-    {
-      "case_id": "CASE-2026-9081",
-      "overall_risk_score": 0.88,
-      "risk_level": "HIGH",
-      "evidence_package": {
-        "fir_draft": "...",
-        "executive_summary": "...",
-        "ipc_sections": ["Section 66D IT Act", "Section 318 BNS"],
-        "recommended_actions": ["..."]
+- **Endpoint**: `POST /api/pipeline/upload`
+- **Content-Type**: `multipart/form-data`
+- **Request Parameters**:
+  - `text_input` (string, required): Core incident description.
+  - `complainant_name` (string, optional)
+  - `complainant_contact` (string, optional)
+  - `lat` (float, optional): Case latitude.
+  - `lon` (float, optional): Case longitude.
+  - `audio_file` (binary, optional): Wave call recording.
+  - `image_file` (binary, optional): Rupee note photo.
+- **Example Response (Success 200 OK)**:
+  ```json
+  {
+    "case_id": "CASE-2026-7890",
+    "overall_risk_score": 0.92,
+    "risk_level": "CRITICAL",
+    "confidence": 0.94,
+    "scam_result": {
+      "status": "SUCCESS",
+      "risk_score": 0.95,
+      "risk_level": "CRITICAL",
+      "scam_type": "digital_arrest",
+      "confidence": 0.96,
+      "entities": {
+        "phone_numbers": ["+91 99887 76655", "+91 81302 99421"],
+        "upi_ids": ["payment.police@paytm"]
       },
-      "scam_result": { "risk_score": 0.9, "scam_type": "digital_arrest", "entities": {} },
-      "voice_result": null,
-      "counterfeit_result": null,
-      "graph_result": { "fraud_rings": [], "pagerank_scores": {} },
-      "geo_result": { "hotspots": [], "patrol_recommendations": [] },
-      "errors": []
-    }
-    ```
+      "explanation": "Digital arrest scam pattern detected."
+    },
+    "voice_result": {
+      "status": "SUCCESS",
+      "transcript": "Transfer fifty thousand rupees...",
+      "is_deepfake": true,
+      "deepfake_confidence": 0.98,
+      "audio_quality": "excellent"
+    },
+    "counterfeit_result": {
+      "status": "SKIPPED",
+      "reason": "No banknote image uploaded."
+    },
+    "errors": []
+  }
+  ```
+- **Error Response (400 Bad Request)**:
+  ```json
+  {
+    "detail": "Failed to parse coordinate values."
+  }
+  ```
 
-### Ask Copilot (Hybrid RAG Search)
-*   **Endpoint**: `POST /api/agents/rag`
-*   **Headers**: `Content-Type: application/json`
-*   **Request Body**:
-    ```json
-    {
-      "query": "Which BNS sections apply to impersonating a CBI officer?",
-      "case_id": "CASE-2026-9081",
-      "top_k": 5
-    }
-    ```
-*   **Response Payload (`200 OK`)**:
-    ```json
-    {
-      "answer": "Under BNS guidelines, impersonating a public officer is covered under Section 319 (Impersonation)...",
-      "citations": [
-        {
-          "source_id": "legal_precedent_sec_319",
-          "chunk_text": "Section 319 BNS details cheating by impersonation using standard identity claims...",
-          "relevance_score": 0.924,
-          "source_type": "legal"
-        }
-      ],
-      "similar_cases": ["CASE-2025-4421"],
-      "confidence": 0.924,
-      "tokens_used": 284
-    }
-    ```
-
----
-
-## 5. Frontend Portal Workspaces
-
-The React + Vite portal is implemented inside [App.jsx](file:///c:/Users/nikhi/OneDrive/Desktop/genai2/SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform/frontend/src/App.jsx).
-
-*   **State Management**: Tracks current case details, pipeline stages, individual agent responses, and message histories. Features a connection toggle pointing to `http://localhost:8000`.
-*   **Vibrant Gauges**: Implements dynamic badges reflecting risk severity:
-    *   $\ge 80\%$: Critical (Rose border/text).
-    *   $30\% - 79\%$: Medium-High (Amber border/text).
-    *   $< 30\%$: Low (Emerald border/text).
-*   **Interactive SVG Fraud Graph**:
-    *   Distributes entity nodes radially around a central Case node using angular divisions:
-        $$\theta = \frac{2\pi \times \text{index}}{\text{total\_entities}}$$
-        $$X = 300 + R \times \cos(\theta),\quad Y = 200 + R \times \sin(\theta)$$
-    *   Tracks hovers/clicks to project details on the Graph Inspector Card, mapping suspect PageRank centralities.
-*   **Crime Trends**: Draws daily crime temporal metrics via **Recharts** `<BarChart>` and `<Bar>` nodes.
-*   **Legal Copilot Messenger**: Displays RAG response streams with citation expanders.
+### RAG Copilot Chat
+- **Endpoint**: `POST /api/agents/rag`
+- **Content-Type**: `application/json`
+- **Request Payload**:
+  ```json
+  {
+    "query": "What sections of BNS cover digital arrest impersonation?",
+    "case_id": "CASE-2026-7890",
+    "top_k": 3
+  }
+  ```
+- **Response Payload (Success 200 OK)**:
+  ```json
+  {
+    "answer": "Section 319 BNS covers cheating by impersonation...",
+    "citations": [
+      {
+        "source_id": "legal_precedent_sec_319",
+        "chunk_text": "Section 319 BNS details cheating by impersonation using standard identity claims...",
+        "relevance_score": 0.92,
+        "source_type": "legal"
+      }
+    ],
+    "similar_cases": ["CASE-2026-4011"],
+    "confidence": 0.92,
+    "tokens_used": 280,
+    "hallucination_guard_triggered": false
+  }
+  ```
 
 ---
 
-## 6. Developer Deployment Guide
+## 🛠️ 4. Local Deployment & Run Instructions
 
-### Manual Local Run
-1.  **Clone & Verify Paths**:
-    Ensure paths match your workspace configuration (e.g. `c:/Users/nikhi/OneDrive/Desktop/genai2/...`).
-2.  **Start API Gateway (Terminal 1)**:
-    ```powershell
-    cd SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform
-    C:\Users\nikhi\AppData\Local\Python\pythoncore-3.14-64\python.exe main.py
-    ```
-3.  **Start Dev Client (Terminal 2)**:
-    ```bash
-    cd SentinelShield_AI-Multi-Agent-Public-Safety-Intelligence-Platform/frontend
-    npm run dev
-    ```
-4.  **Audit Logs**: Check server terminal logs (`main:lifespan` initialization checkpoints) and check web dashboard views on `http://localhost:5173`.
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/your-username/SentinelShield.git
+cd SentinelShield
+```
+
+### Step 2: Backend Setup
+Create a virtual environment and install dependencies:
+```bash
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+Copy environment file:
+```bash
+cp .env.example .env
+```
+
+### Step 3: Run Backend
+Start the FastAPI app:
+```bash
+python main.py
+```
+*Verify server starts on `http://localhost:8000`.*
+
+### Step 4: Run Frontend
+In a new terminal, build and run Vite React client:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*Open your web browser at `http://localhost:5173/`.*
+
+---
+
+## 🛟 5. Troubleshooting Guide
+
+- **Error: "No module named 'psycopg2'"**
+  *Reason*: PostgreSQL drivers missing.
+  *Fix*: Run in graceful PostgreSQL fallback mode automatically, or install binary drivers: `pip install psycopg2-binary`.
+- **Error: "Failed to connect to bolt://localhost:7687"**
+  *Reason*: Neo4j database is offline or not installed.
+  *Fix*: SentinelShield handles this gracefully, switching automatically to **NetworkX local graph** models. No manual recovery action is required.
+- **Error: "sentence_transformers missing"**
+  *Reason*: Deep learning embedding libraries uninstalled.
+  *Fix*: The RAG copilot falls back to standard BM25 keyword matching search.
+- **Error: "fitz missing (PyMuPDF)"**
+  *Reason*: PDF library uninstalled.
+  *Fix*: The Evidence Agent falls back to standard text output reports (`reports/report_*.txt`).

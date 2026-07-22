@@ -26,9 +26,18 @@ def graph_agent_node(state: dict) -> dict:
         return {"graph_result": result}
     except Exception as e:
         logger.error(f"[GraphAgent] Node error: {e}")
+        from shared.schemas import FraudGraphResult, RiskLevel
+        result = FraudGraphResult(
+            status="FAILED",
+            reason=str(e),
+            risk_score=0.0,
+            risk_level=RiskLevel.LOW,
+            explanation=f"Graph agent node encountered exception: {str(e)}"
+        )
         errors = list(state.get("errors", []))
         errors.append(f"graph_agent: {str(e)}")
-        return {"errors": errors}
+        return {"graph_result": result, "errors": errors}
+
 
 
 def run(entities: ExtractedEntities, complaint_id: str, case_id: str | None = None):

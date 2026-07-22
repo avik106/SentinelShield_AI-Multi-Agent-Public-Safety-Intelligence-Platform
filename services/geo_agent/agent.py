@@ -20,9 +20,18 @@ def geo_agent_node(state: dict) -> dict:
         return {"geo_result": result}
     except Exception as e:
         logger.error(f"[GeoAgent] Node error: {e}")
+        from shared.schemas import GeoIntelligenceResult, RiskLevel
+        result = GeoIntelligenceResult(
+            status="FAILED",
+            reason=str(e),
+            risk_score=0.0,
+            risk_level=RiskLevel.LOW,
+            explanation=f"Geo agent node encountered exception: {str(e)}"
+        )
         errors = list(state.get("errors", []))
         errors.append(f"geo_agent: {str(e)}")
-        return {"errors": errors}
+        return {"geo_result": result, "errors": errors}
+
 
 
 def run(complaints: list[dict], lat: float | None = None, lon: float | None = None, case_id: str | None = None):

@@ -1,0 +1,4 @@
+To run a live voice deepfake analysis, place any 16kHz mono PCM .wav voice recording in this directory, name it 'sample_call_arrest.wav', and upload it via the File Analyzer tab.
+
+Expected Speech Sample:
+"This is Deputy Commissioner Sanjay Sharma. You are under digital arrest. Transfer fifty thousand rupees to the designated verification account immediately or you will be arrested."
